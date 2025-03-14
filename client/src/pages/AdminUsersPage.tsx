@@ -23,7 +23,7 @@ const userSchema = yup.object({
   position: yup.string().required("Посада обов’язкова"),
 });
 
-export default function UsersManagementPage() {
+export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [search, setSearch] = useState("");
