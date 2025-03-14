@@ -6,25 +6,25 @@ import { User } from "../types/User";
 import { PropsWithChildren } from "react";
 
 type ProtectedRouteProps = PropsWithChildren & {
-    allowedRoles?: User['roles'];
-}
+  allowedRoles?: User['role'][]; 
+};
 
 const ProtectedRoute = ({ allowedRoles, children }: ProtectedRouteProps) => {
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading } = useAuth();
 
-  if (currentUser === undefined) {
+  if (isLoading) {
     return <PageLoader />;
   }
 
-  if (currentUser === null) {
+  if (!currentUser) {
     return <Navigate to="/login" />;
   }
 
-  if (allowedRoles && !allowedRoles.some(role => currentUser.roles.includes(role))) {
+  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
     return <PageFallback code="403" message="You don't have permission to visit this page" />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
