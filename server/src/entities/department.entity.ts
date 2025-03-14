@@ -10,9 +10,9 @@ export class Department {
   @Column()
   name: string;
 
-  @ManyToOne(() => Unit, (unit) => unit.departments)
+  @ManyToOne(() => Unit, (unit) => unit.departments, { onDelete: 'SET NULL' })
   unit: Unit;
 
-  @OneToMany(() => User, (user) => user.department)
+  @OneToMany(() => User, (user) => user.department, { onDelete: 'SET NULL' })
   users: User[];
 }
