@@ -43,7 +43,6 @@ const PageLayout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 relative overflow-x-hidden">
-      {/* Кнопка-гамбургер */}
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="fixed top-4 right-4 z-20 p-3 bg-indigo-600 dark:bg-indigo-500 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-400 focus:outline-none shadow-lg transition-all"
@@ -51,7 +50,6 @@ const PageLayout = () => {
         ☰
       </button>
 
-      {/* Оверлей для закриття меню */}
       {isMenuOpen && (
         <div
           onClick={() => setIsMenuOpen(false)}
@@ -59,7 +57,6 @@ const PageLayout = () => {
         />
       )}
 
-      {/* Бокове меню */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.aside
@@ -94,7 +91,6 @@ const PageLayout = () => {
 
               <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
 
-              {/* Перемикач теми */}
               <button
                 onClick={toggleTheme}
                 className="block w-full text-left px-4 py-3 rounded-xl text-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
@@ -104,7 +100,6 @@ const PageLayout = () => {
 
               <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
 
-              {/* Кнопка виходу */}
               <button
                 onClick={() => {
                   setIsMenuOpen(false)
@@ -118,8 +113,7 @@ const PageLayout = () => {
           </motion.aside>
         )}
       </AnimatePresence>
-
-      {/* Контент сторінки */}
+      
       <main className="p-6 flex-grow bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 rounded-lg shadow-md m-4">
         <Outlet />
       </main>
