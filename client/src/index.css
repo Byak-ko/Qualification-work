@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* Загальні стилі для body */
+body {
+  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300;
+}
+
+/* Стилі для скролбарів */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.4); /* slate-500 з прозорістю */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
+}
+
+/* Анімації на hover — без @apply тут, бо не можна його в глобальному CSS для тегів */
+a, button {
+  transition: all 0.2s ease-in-out;
+}
+
 /*:root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
