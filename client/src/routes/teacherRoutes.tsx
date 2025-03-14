@@ -1,6 +1,7 @@
 import ProtectedRoute from "../components/ProtectedRoute"
 import PageLayout from "../components/PageLayout"
 import { Role } from "../types/User";
+import TeacherPage from "../pages/TeacherPage"
 
 export const teacherRoutes = [
   {
@@ -11,8 +12,8 @@ export const teacherRoutes = [
     ),
     children: [
       {
-        path: "/surveys",
-      //  element: <SurveyPage />,
+        path: "/me",
+        element: <TeacherPage />,
       },
     ],
   },
