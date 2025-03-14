@@ -13,9 +13,18 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { RatingsModule } from './ratings/rating.module';
 import { RatingItemsModule } from './rating-items/rating-items.module';
+import { ConfigModule } from '@nestjs/config';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
+import { JwtModule } from '@nestjs/jwt';
+import { UnitsModule } from './units/units.module';
+import { DepartmentsModule } from './departments/departments.module';
+import { DepartmentsController } from './departments/departments.controller';
+import { DepartmentsService } from './departments/departments.service';
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -27,11 +36,19 @@ import { RatingItemsModule } from './rating-items/rating-items.module';
       autoLoadEntities: true,
       synchronize: true, //production off?
     }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
     TypeOrmModule.forFeature([User, Department, Unit, Rating, RatingItem, RatingApproval, Document]),
     UsersModule,
     AuthModule,
     RatingsModule,
     RatingItemsModule,
+    UnitsModule,
+    DepartmentsModule,
   ],
+  controllers: [AuthController, DepartmentsController],
+  providers: [AuthService, DepartmentsService],
 })
 export class AppModule {}
