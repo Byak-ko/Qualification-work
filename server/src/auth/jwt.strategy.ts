@@ -1,27 +1,23 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
+import { AuthService } from './auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {
+  constructor(private authService: AuthService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_SECRET || 'secretKey',
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET,
     });
   }
 
-  async validate(payload: { id: number }): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: payload.id } });
-    if (!user) {
-      throw new UnauthorizedException();
+  async validate(payload: any) {
+    if (this.authService.isTokenRevoked(payload.sub)) {
+      throw new UnauthorizedException('Token is revoked');
     }
-    return user;
+    return { userId: payload.sub, role: payload.role };
   }
+  
 }
