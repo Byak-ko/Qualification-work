@@ -23,6 +23,9 @@ export class Rating {
   @Column({ default: 'pending' })
   status: string;
 
+  @Column({ type: 'float', default: 0 })
+  totalScore: number;
+
   @OneToMany(() => RatingItem, (item) => item.rating)
   items: RatingItem[];
 

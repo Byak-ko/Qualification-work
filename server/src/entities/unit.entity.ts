@@ -12,6 +12,6 @@ export class Unit {
   @Column()
   type: string;
 
-  @OneToMany(() => Department, (department) => department.unit)
+  @OneToMany(() => Department, (department) => department.unit, { onDelete: 'SET NULL' })
   departments: Department[];
 }

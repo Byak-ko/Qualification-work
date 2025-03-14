@@ -28,6 +28,12 @@ export class User {
   @Column()
   password: string;
 
+  @Column()
+  degree: string;
+
+  @Column()
+  position: string;
+
   @ManyToOne(() => Department, (department) => department.users)
   department: Department;
 
