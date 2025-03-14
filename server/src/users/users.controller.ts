@@ -1,14 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Req, Delete, Body, Param, UseGuards, ConflictException } from '@nestjs/common';
 import { UserService } from './users.service';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../entities/user.entity';
 import { RolesGuard } from '../auth/roles.guard';
 import { Role } from '../auth/roles.decorator';
+import { CreateUserDto } from './dto/create-user.dto'
+import { UpdateUserDto } from './dto/update-user.dto'
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly userService: UserService) {}
 
@@ -17,63 +18,35 @@ export class UsersController {
     return this.userService.findAll();
   }
 
+  @Get('current')
+  getCurrentUser(@Req() req) {
+    return this.userService.findById(req.user.userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: number): Promise<User> {
-    return this.userService.findOne(id);
+    return this.userService.findById(id);
   }
 
   @Post()
   @Role(UserRole.ADMIN)
-  async createUser(
-    @Body() 
-    body: { 
-      lastName: string; 
-      firstName: string; 
-      email: string; 
-      password: string; 
-      role: UserRole;
-      departmentId: number;
-      degree: string;
-      position: string;
+  async create(@Body() createUserDto: CreateUserDto) {
+    const existingUser = await this.userService.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException('Цей email вже використовується');
     }
-  ) {
-    if (!body.lastName || !body.firstName || !body.email || !body.password || !body.role || 
-        !body.departmentId || !body.degree || !body.position) {
-      throw new BadRequestException('Усі поля є обов’язковими');
-    }
-
-    if (!Object.values(UserRole).includes(body.role)) {
-      throw new BadRequestException('Неправильна роль');
-    }
-
-    if (body.password.length < 6) {
-      throw new BadRequestException('Пароль має бути не менше 6 символів');
-    }
-
-    return this.userService.create(body);
+    return this.userService.create(createUserDto);
   }
 
-  @Put(':id')
+  @Patch(':id')
   @Role(UserRole.ADMIN)
-  async updateUser(
-    @Param('id') id: number,
-    @Body() body: { 
-      lastName?: string; 
-      firstName?: string; 
-      email?: string; 
-      password?: string; 
-      role?: UserRole;
-      departmentId?: number;
-      degree?: string;
-      position?: string;
-    }
-  ) {
-    return this.userService.update(id, body);
+  async update(@Param('id') id: number, @Body() dto: UpdateUserDto) {
+    return this.userService.update(id, dto)
   }
 
   @Delete(':id')
   @Role(UserRole.ADMIN)
-  async deleteUser(@Param('id') id: number) {
-    return this.userService.delete(id);
+  async remove(@Param('id') id: number) {
+    return this.userService.delete(id)
   }
 }
