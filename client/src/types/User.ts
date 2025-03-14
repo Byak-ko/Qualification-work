@@ -1,7 +1,7 @@
 export enum Role {
     ADMIN = "admin",
     TEACHER = "teacher",
-    GUEST = "guest"
+    GUEST = "guest" // need or not?
 }
 
 export type User = {
@@ -9,5 +9,12 @@ export type User = {
     email: string;
     firstName: string;
     lastName: string;
-    roles: Role[];
+    role: Role;
+    degree: string;
+    position: string;
+    departmentId: number;
+    department: {
+        id: number;
+        name: string;
+    }
 };
