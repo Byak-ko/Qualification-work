@@ -25,12 +25,14 @@ export class RatingService {
       throw new Error('Автор або один із респондентів не знайдені');
     }
 
+    const totalScore = data.items.reduce((sum, item) => sum + item.maxScore, 0);
 
     const rating = this.ratingRepository.create({
       author,
       respondent: author, 
       type: data.type,
       name: data.name,
+      totalScore
     });
     await this.ratingRepository.save(rating);
 
