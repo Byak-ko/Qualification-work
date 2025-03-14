@@ -1,35 +1,72 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userRepository: Repository<User>,
-    private jwtService: JwtService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private jwtService: JwtService
   ) {}
-
-  async validateUser(email: string, password: string): Promise<any> {
+  private revokedTokens = new Set<number>();
+  async validateUser(email: string, password: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new UnauthorizedException('Невірний email або пароль');
+    if (user && await bcrypt.compare(password, user.password)) {
+      return user;
     }
+    throw new UnauthorizedException('Невірний логін або пароль');
+  }
 
-    const payload = { id: user.id, email: user.email, role: user.role };
+  async login(user: User) {
+    const payload = { sub: user.id, role: user.role };
+  
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '15m',
+    });
+  
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '7d', 
+    });
+  
     return {
-      access_token: this.jwtService.sign(payload),
-      user: payload,
+      access_token: accessToken,
+      refresh_token: refreshToken, 
     };
   }
 
-  async login(user: any) {
-    const payload = { email: user.email, sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  async refreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+
+      const newAccessToken = this.jwtService.sign(
+        { sub: payload.sub, role: payload.role },
+        { secret: process.env.JWT_SECRET, expiresIn: '15m' }
+      );
+
+      return { access_token: newAccessToken };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+  
+
+  async logout(userId: number) {
+    this.revokedTokens.add(userId); 
+  }
+
+  isTokenRevoked(userId: number): boolean {
+    return this.revokedTokens.has(userId);
   }
 }
