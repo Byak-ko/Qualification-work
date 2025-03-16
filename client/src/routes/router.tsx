@@ -2,13 +2,14 @@ import { createBrowserRouter } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import HomePage from "../pages/HomePage";
 import AdminUsersPage from "../pages/AdminUsersPage";
-import RatingsPage from "../pages/RatingsPage";
+import CreateRatingPage from "../pages/CreateRatingPage";
 import ReportsPage from "../pages/ReportsPage";
 import LoginPage from "../pages/LoginPage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import PageFallback from "../components/PageFallback";
 import { Role } from "../types/User";
 import UnitsDepartmentsPage from "../pages/UnitsDepartmentsPage";
+import FillRatingPage from "../pages/FillRatingPage";
 
 export const router = createBrowserRouter([
   {
@@ -43,7 +44,15 @@ export const router = createBrowserRouter([
         path: "ratings",
         element: (
           <ProtectedRoute allowedRoles={[Role.ADMIN]}>
-            <RatingsPage />
+            <CreateRatingPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "ratings/:id/fill",
+        element: (
+          <ProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <FillRatingPage />
           </ProtectedRoute>
         ),
       },
