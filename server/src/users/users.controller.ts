@@ -40,8 +40,12 @@ export class UsersController {
 
   @Patch(':id')
   @Role(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() dto: UpdateUserDto) {
-    return this.userService.update(id, dto)
+  async update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
+    const existingUser = await this.userService.findByEmail(updateUserDto.email);
+    if (existingUser && existingUser.id !== id) {
+      throw new ConflictException('Цей email вже використовується');
+    }
+    return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
