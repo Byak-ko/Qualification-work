@@ -5,7 +5,7 @@ type ConfirmModalProps = {
   title: string;
   message: string;
   onSubmit: () => void | Promise<void>;
-  onClose: () => void
+  onClose: () => void;
 };
 
 const ConfirmModal = ({ isOpen, title, message, onSubmit, onClose, }: ConfirmModalProps) => {
