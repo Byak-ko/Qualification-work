@@ -23,14 +23,14 @@ export class UserService {
   }
 
   async findById(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['department'] });
     if (!user) {
       throw new NotFoundException(`Користувача з ID ${id} не знайдено`);
     }
     return user;
   }
   async findByEmail(email: string): Promise<User | null> {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({ where: { email }, relations: ['department'] });
     return user || null;
   }
 
