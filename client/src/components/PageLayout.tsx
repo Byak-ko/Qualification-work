@@ -2,16 +2,17 @@ import { useState, useEffect } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "./AuthProvider"
-import { useTheme } from "./ThemeProvider"
 import { Role } from "../types/User"
 import NProgress from "nprogress"
 import "nprogress/nprogress.css"
+import { useTheme } from "./ThemeProvider"
 
 const PageLayout = () => {
   const { currentUser, logout } = useAuth()
-   const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const location = useLocation()
+  
 
   useEffect(() => {
     NProgress.start()
@@ -42,7 +43,7 @@ const PageLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-50 bg-white relative overflow-x-hidden">
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="fixed top-4 right-4 z-20 p-3 bg-indigo-600 dark:bg-indigo-500 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-400 focus:outline-none shadow-lg transition-all"
@@ -114,7 +115,7 @@ const PageLayout = () => {
         )}
       </AnimatePresence>
       
-      <main className="p-6 flex-grow bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 rounded-lg shadow-md m-4">
+      <main className="p-6 flex-grow bg-white bg-white text-gray-900 dark:text-gray-200 rounded-lg shadow-md m-4">
         <Outlet />
       </main>
     </div>
