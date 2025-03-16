@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, BeforeIns
 import * as bcrypt from 'bcrypt';
 import { Department } from './department.entity';
 import { Rating } from './rating.entity';
+import { RatingApproval } from './rating-approval.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -38,10 +39,13 @@ export class User {
   department: Department;
 
   @OneToMany(() => Rating, (rating) => rating.author)
-  ratings: Rating[];
+  ratingsAuthor: Rating[];
 
   @OneToMany(() => Rating, (rating) => rating.respondent)
-  rated: Rating[];
+  ratingsRespondent: Rating[];
+
+  @OneToMany(() => RatingApproval, (approval) => approval.reviewer)
+  approvals: RatingApproval[];
 
   @BeforeInsert()
   @BeforeUpdate()
