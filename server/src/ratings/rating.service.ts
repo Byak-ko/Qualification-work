@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Rating } from '../entities/rating.entity';
 import { User } from '../entities/user.entity';
 import { RatingItem } from '../entities/rating-item.entity';
 import { RatingApproval } from '../entities/rating-approval.entity';
+import { CreateRatingDto } from './dto/create-rating.dto';
 
 @Injectable()
 export class RatingService {
@@ -15,49 +16,75 @@ export class RatingService {
     @InjectRepository(RatingApproval) private ratingApprovalRepository: Repository<RatingApproval>,
   ) {}
 
-  async createRating(authorId: number, data: { respondentIds: number[]; type: string; name: string; items: { name: string; maxScore: number }[] }) {
+  async createRating(authorId: number, dto: CreateRatingDto) {
     const author = await this.userRepository.findOne({ where: { id: authorId } });
-    const respondents = await this.userRepository.find({
-      where: data.respondentIds.map((id) => ({ id })),
-    });
+    if (!author) throw new Error('Автор не знайдений');
+  
+    const respondent = await this.userRepository.findOne({ where: { id: dto.respondentId } });
+    if (!respondent) throw new Error('Респондент не знайдений');
 
-    if (!author || respondents.length !== data.respondentIds.length) {
-      throw new Error('Автор або один із респондентів не знайдені');
+    const reviewers = await this.userRepository.findByIds(dto.reviewerIds ?? []);
+    if (reviewers.length !== (dto.reviewerIds?.length || 0)) {
+      throw new Error('Один або більше перевіряючих не знайдено');
     }
-
-    const totalScore = data.items.reduce((sum, item) => sum + item.maxScore, 0);
-
+  
+    const allReviewers = [author, ...reviewers]; 
+    const totalScore = dto.items.reduce((sum, item) => sum + item.maxScore, 0); // total score or total max score?
+  
     const rating = this.ratingRepository.create({
+      name: dto.name,
+      type: dto.type,
+      status: 'pending',
+      totalScore,
       author,
-      respondent: author, 
-      type: data.type,
-      name: data.name,
-      totalScore
+      respondent,
     });
+  
     await this.ratingRepository.save(rating);
-
-
-    const ratingItems = data.items.map((item) =>
+  
+    const ratingItems = dto.items.map((item) =>
       this.ratingItemRepository.create({
         rating,
         name: item.name,
         maxScore: item.maxScore,
         score: 0,
-      })
+      }),
     );
+  
     await this.ratingItemRepository.save(ratingItems);
-
-
-    const ratingApprovals = [author, ...respondents].map((user) =>
+  
+    const ratingApprovals = allReviewers.map((reviewer) =>
       this.ratingApprovalRepository.create({
         rating,
-        reviewer: user,
-        status: 'pending', 
+        reviewer,
+        status: 'pending',
         comments: '',
       })
     );
     await this.ratingApprovalRepository.save(ratingApprovals);
-
-    return { rating, ratingItems, ratingApprovals };
+  
+    return { rating, ratingItems };
   }
+
+ /* async assignToRespondent(id: number, dto: AssignRatingDto) {
+    const rating = await this.ratingRepository.findOne({
+      where: { id },
+      relations: ['respondent'],
+    });
+  
+    if (!rating) throw new NotFoundException('Рейтинг не знайдено');
+  
+    rating.respondent = await this.userRepository.findOneByOrFail({ id: dto.respondentId });
+    rating.status = 'in_progress';
+  
+    return await this.ratingRepository.save(rating);
+  } */
+  
+    
+
+  async getRatings() {
+    return this.ratingRepository.find({ relations: ['author'] });
+  }
+   
+  
 }
