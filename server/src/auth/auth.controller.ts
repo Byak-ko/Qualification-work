@@ -4,7 +4,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiTags('auth') // Групуємо всі ендпоїнти під тегом "auth"
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -23,7 +23,14 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Успішна автентифікація', schema: { type: 'object', properties: { accessToken: { type: 'string' }, refreshToken: { type: 'string' } } }})
+  @ApiResponse({ status: 200, description: 'Успішна автентифікація', schema: { 
+    type: 'object', 
+    properties: { 
+      accessToken: { type: 'string' }, 
+      refreshToken: { type: 'string' } 
+    } 
+  }
+})
   @ApiResponse({ status: 401, description: 'Невірний email або пароль' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
   async login(@Body() body: { email: string; password: string }) {
@@ -45,7 +52,15 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Токен успішно оновлено', schema: { type: 'object', properties: { accessToken: { type: 'string' }, refreshToken: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Токен успішно оновлено', schema: { 
+    type: 'object',
+     properties: {
+       accessToken: { type: 'string' }, 
+       refreshToken: { type: 'string' } 
+      } 
+    } 
+  }
+)
   @ApiResponse({ status: 401, description: 'Невірний refresh токен' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
   async refresh(@Body() body: { refreshToken: string }) {
@@ -59,7 +74,16 @@ export class AuthController {
     summary: 'Вийти з системи',
     description: 'Видаляє токен доступу та завершує сесію користувача.',
   })
-  @ApiResponse({ status: 200, description: 'Вихід з акаунту успішний', schema: { type: 'object', properties: { message: { type: 'string', example: 'Вихід з акаунту успішний' } } }})
+  @ApiResponse({ status: 200, description: 'Вихід з акаунту успішний', schema: { 
+    type: 'object', 
+    properties: { 
+      message: { 
+        type: 'string', 
+        example: 'Вихід з акаунту успішний' 
+      } 
+    } 
+  }
+})
   @ApiResponse({ status: 401, description: 'Неавторизований користувач' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
   async logout(@Request() req, @Res() res: Response) {
