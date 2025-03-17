@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 dotenv.config();
 
@@ -12,7 +13,18 @@ async function bootstrap() {
     origin: 'http://localhost:5173',  
     credentials: true,  
   });
+
+  const config = new DocumentBuilder()
+    .setTitle('Teacher rating system API')
+    .setDescription('A system of teacher rating with multi-level verification of higher education institutions')
+    .setVersion('1.0')
+    .addTag('users', 'Операції з користувачами') 
+    .addTag('raings', 'Операції з рейтингами')
+    .addTag('auth', 'Авторизація та аутентифікація')
+    .build();
   
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document); 
   
   await app.listen(process.env.PORT ?? 3000);
 }
