@@ -4,7 +4,6 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: "class", 
   theme: {
     extend: {
       colors: {
@@ -24,12 +23,17 @@ module.exports = {
       },
       animation: {
         shake: "shake 0.4s ease-in-out",
+        'fade-in-up': 'fadeInUp 0.3s ease-out',
       },
       keyframes: {
         shake: {
           "0%, 100%": { transform: "translateX(0)" },
           "20%, 60%": { transform: "translateX(-8px)" },
           "40%, 80%": { transform: "translateX(8px)" },
+        },
+        fadeInUp: {
+          '0%': { opacity: 0, transform: 'translateY(20px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
         },
       },
       boxShadow: {
