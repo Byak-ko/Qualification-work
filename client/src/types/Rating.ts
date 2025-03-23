@@ -16,3 +16,9 @@ export type RatingItem = {
     score: number;
     documents: File[];
 };
+
+export type RatingApproval = {
+    ratingId: number;
+    comments: Record<number, string>;
+    status: "approved" | "revision";
+}

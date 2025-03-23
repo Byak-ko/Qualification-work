@@ -12,7 +12,6 @@ export type User = {
     role: Role;
     degree: string;
     position: string;
-    departmentId: number;
     department: {
         id: number;
         name: string;
