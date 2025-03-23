@@ -7,6 +7,7 @@ import { Rating } from '../entities/rating.entity'
 import { User } from '../entities/user.entity'
 import { RatingItem } from '../entities/rating-item.entity'
 import { RatingApproval } from '../entities/rating-approval.entity'
+import { Document } from 'src/entities/document.entity'
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RatingApproval } from '../entities/rating-approval.entity'
       User,
       RatingItem,
       RatingApproval,
+      Document,
     ]),
   ],
   providers: [RatingService],

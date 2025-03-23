@@ -13,11 +13,6 @@ export class CreateUserDto {
   @IsEmail({}, { message: 'Некоректний email' })
   email: string
 
-  @IsNotEmpty({ message: 'Пароль не може бути пустим' })
-  @MinLength(6, { message: 'Пароль має містити мінімум 6 символів' })
-  @IsString()
-  password: string
-
   @IsEnum(UserRole)
   role: UserRole
 

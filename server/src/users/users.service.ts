@@ -3,10 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from '../entities/user.entity';
 import { Department } from '../entities/department.entity';
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
+import * as crypto from "crypto";
+import { MailService } from "../mail/mail.service";
 
 @Injectable()
 export class UserService {
@@ -16,7 +17,8 @@ export class UserService {
     private userRepository: Repository<User>,
     @InjectRepository(Department)
     private departmentRepository: Repository<Department>,
-  ) {}
+    private readonly mailService: MailService
+  ) { }
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({ relations: ['department'] });
@@ -35,20 +37,31 @@ export class UserService {
   }
 
   async create(dto: CreateUserDto) {
-    const { departmentId, password, ...rest } = dto
-
+    const { departmentId, email, ...rest } = dto;
+  
     const department = await this.departmentRepository.findOne({
       where: { id: departmentId },
-    })
-    if (!department) throw new NotFoundException('Кафедру не знайдено')
-
+    });
+    if (!department) throw new NotFoundException("Кафедру не знайдено");
+  
+    const generatedPassword = crypto.randomBytes(4).toString("hex");
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+  
     const user = this.userRepository.create({
       ...rest,
+      email,
+      password: hashedPassword,
       department,
-      password: await bcrypt.hash(password, 10),
-    })
-
-    return this.userRepository.save(user)
+    });
+    await this.userRepository.save(user);
+  
+    await this.mailService.sendMail({
+      to: email,
+      subject: "Ваш акаунт створено",
+      text: `Ваш пароль для входу в систему: ${generatedPassword}`,
+    });
+  
+    return user;
   }
 
   async update(id: number, dto: UpdateUserDto) {
@@ -70,6 +83,17 @@ export class UserService {
     const { departmentId, password, ...rest } = dto
     Object.assign(user, rest)
     return this.userRepository.save(user)
+  }
+
+  async updatePassword(id: number, newPassword: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException("Користувача не знайдено");
+    }
+    user.password = newPassword
+    await this.userRepository.save(user);
+
+    return { message: "Пароль успішно оновлено" };
   }
 
   async delete(id: number) {

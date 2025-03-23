@@ -1,8 +1,10 @@
-import { Controller, Post, Get, Body, Param, ParseIntPipe, Patch, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Req, ParseIntPipe } from '@nestjs/common';
 import { RatingService } from './rating.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { Request } from 'express';
+import { FillRespondentDto } from './dto/fill-respondent.dto';
+import { RatingApprovalDto } from './dto/rating-approval.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ratings')
@@ -25,26 +27,23 @@ export class RatingController {
     };
   }
 
- /* @Patch(':id/assign')
-  async assignToRespondent(@Param('id', ParseIntPipe) id: number, @Body() dto: AssignRatingDto) {
-    return this.ratingService.assignToRespondent(id, dto);
-  } */
+  @Get(':id/respondent')
+async getRatingForRespondent(@Param('id') id: number, @Req() req: any) {
+  return this.ratingService.getRatingForRespondent(+id, req.user.id);
+}
 
-   /* @Get(':id/fill')
-    async getForRespondent(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-      const rating = await this.ratingRepository.findOne({
-        where: {
-          id,
-          respondent: { id: req.user.id },
-          status: 'in_progress',
-        },
-        relations: ['items', 'items.documents'],
-      });
+@Post(':id/respondent-fill')
+async fillByRespondent(@Param('id') id: number, @Body() dto: FillRespondentDto, @Req() req: any) {
+  return this.ratingService.fillRatingByRespondent(+id, dto, req.user.id);
+}
 
-      if (!rating) throw new NotFoundException('Рейтинг не знайдено або недоступний');
-
-      return rating;
-    } */
-
-
+@Post(':id/review')
+async reviewRating(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: RatingApprovalDto,
+  @Req() req: Request,
+) {
+  const userId = req.user.id
+  return this.ratingService.reviewRating(id, dto, userId);
+}
 }

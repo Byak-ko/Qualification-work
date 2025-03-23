@@ -35,7 +35,8 @@ export class DepartmentsController {
   @ApiResponse({ status: 201, description: 'Підрозділ успішно створено' })
   @ApiResponse({ status: 400, description: 'Невірні дані' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async createDepartment(@Body() body: { name: string; unitId: number }) {
+  async createDepartment(@Body() body: { name: string; unit: number }) {
+    console.log("Body department", body);
     return this.departmentsService.create(body);
   }
 
@@ -63,7 +64,7 @@ export class DepartmentsController {
   @ApiResponse({ status: 400, description: 'Невірні дані' })
   @ApiResponse({ status: 404, description: 'Підрозділ не знайдено' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async updateDepartment(@Param('id') id: number, @Body() body: { name: string; unitId: number }) {
+  async updateDepartment(@Param('id') id: number, @Body() body: { name: string; unit: number }) {
     return this.departmentsService.update(id, body);
   }
 

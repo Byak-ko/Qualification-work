@@ -21,6 +21,7 @@ import { UnitsModule } from './units/units.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { DepartmentsController } from './departments/departments.controller';
 import { DepartmentsService } from './departments/departments.service';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { DepartmentsService } from './departments/departments.service';
     RatingItemsModule,
     UnitsModule,
     DepartmentsModule,
+    MailModule
   ],
   controllers: [AuthController, DepartmentsController],
   providers: [AuthService, DepartmentsService],

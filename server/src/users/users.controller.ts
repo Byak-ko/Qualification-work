@@ -37,7 +37,8 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Поточний користувач знайдений', type: User })
   @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
   getCurrentUser(@Req() req) {
-    return this.userService.findById(req.user.userId);
+    console.log("current req",req.user.id)
+    return this.userService.findById(req.user.id);
   }
 
   @Get(':id')
@@ -106,10 +107,16 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Користувач не знайдений' })
   @ApiResponse({ status: 409, description: 'Email вже використовується' })
   async update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
-    const existingUser = await this.userService.findByEmail(updateUserDto.email);
-    if (existingUser && existingUser.id !== id) {
-      throw new ConflictException('Цей email вже використовується');
+    const currentUser = await this.userService.findById(id);
+    
+    if (updateUserDto.email && updateUserDto.email !== currentUser.email) {
+      const existingUser = await this.userService.findByEmail(updateUserDto.email);
+      
+      if (existingUser) {
+        throw new ConflictException('Цей email вже використовується');
+      }
     }
+    
     return this.userService.update(id, updateUserDto);
   }
 

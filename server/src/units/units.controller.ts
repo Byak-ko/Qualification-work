@@ -40,6 +40,7 @@ export class UnitsController {
   @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
   async createUnit(@Body() body: { name: string; type: string }) {
+    console.log("Unit body", body);
     return this.unitsService.create(body);
   }
 

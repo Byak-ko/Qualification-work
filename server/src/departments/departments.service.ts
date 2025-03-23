@@ -17,19 +17,22 @@ export class DepartmentsService {
     return this.departmentRepository.find({ relations: ['unit'] });
   }
 
-  async create(data: { name: string; unitId: number }) {
-    const unit = await this.unitRepository.findOne({ where: { id: data.unitId } });
+  async create(data: { name: string; unit: number }) {
+    console.log("Data", data);
+    console.log("data unitid", data.unit);
+    const unit = await this.unitRepository.findOne({ where: { id: data.unit } });
+    console.log("Found unit", unit);
     if (!unit) throw new Error('Unit not found');
 
     const department = this.departmentRepository.create({ name: data.name, unit });
     return this.departmentRepository.save(department);
   }
 
-  async update(id: number, data: { name: string; unitId: number }) {
+  async update(id: number, data: { name: string; unit: number }) {
     const department = await this.departmentRepository.findOne({ where: { id } });
     if (!department) throw new Error('Department not found');
 
-    const unit = await this.unitRepository.findOne({ where: { id: data.unitId } });
+    const unit = await this.unitRepository.findOne({ where: { id: data.unit } });
     if (!unit) throw new Error('Unit not found');
 
     department.name = data.name;

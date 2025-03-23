@@ -1,13 +1,13 @@
-import { Controller, Post, Req, Request, Body, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Req, Body, Res, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
   @ApiOperation({
@@ -23,20 +23,24 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Успішна автентифікація', schema: { 
-    type: 'object', 
-    properties: { 
-      accessToken: { type: 'string' }, 
-      refreshToken: { type: 'string' } 
-    } 
-  }
-})
+  @ApiResponse({
+    status: 200, description: 'Успішна автентифікація', schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' }
+      }
+    }
+  })
   @ApiResponse({ status: 401, description: 'Невірний email або пароль' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async login(@Body() body: { email: string; password: string }) {
+  async login(
+    @Body() body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response
+  ) {
     const { email, password } = body;
     const user = await this.authService.validateUser(email, password);
-    return this.authService.login(user);
+    return this.authService.login(user, res);
   }
 
   @Post('refresh')
@@ -52,48 +56,60 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Токен успішно оновлено', schema: { 
-    type: 'object',
-     properties: {
-       accessToken: { type: 'string' }, 
-       refreshToken: { type: 'string' } 
-      } 
-    } 
+  @ApiResponse({
+    status: 200, description: 'Токен успішно оновлено', schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' }
+      }
+    }
   }
-)
+  )
   @ApiResponse({ status: 401, description: 'Невірний refresh токен' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async refresh(@Body() body: { refreshToken: string }) {
-    return this.authService.refreshToken(body.refreshToken);
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.authService.refreshToken(req, res);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  @ApiBearerAuth() 
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Вийти з системи',
     description: 'Видаляє токен доступу та завершує сесію користувача.',
   })
-  @ApiResponse({ status: 200, description: 'Вихід з акаунту успішний', schema: { 
-    type: 'object', 
-    properties: { 
-      message: { 
-        type: 'string', 
-        example: 'Вихід з акаунту успішний' 
-      } 
-    } 
-  }
-})
+  @ApiResponse({
+    status: 200, description: 'Вихід з акаунту успішний', schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Вихід з акаунту успішний'
+        }
+      }
+    }
+  })
   @ApiResponse({ status: 401, description: 'Неавторизований користувач' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async logout(@Request() req, @Res() res: Response) {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Неавторизований користувач' });
-    }
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const userId = req.user?.id;
+    if (!userId) throw new UnauthorizedException('Not authorized');
 
-    await this.authService.logout(req.user.userId);
-    res.clearCookie('jwt');
+    await this.authService.logout(userId, res);
+    return { message: 'Logout successful' };
+  }
 
-    return res.status(200).json({ message: 'Вихід з акаунту успішний' });
+  @Post("forgot-password")
+  async forgotPassword(@Body("email") email: string) {
+    return this.authService.sendPasswordResetEmail(email);
+  }
+
+  @Post("reset-password")
+  async resetPassword(
+    @Body("token") token: string,
+    @Body("newPassword") newPassword: string
+  ) {
+    return this.authService.resetPassword(token, newPassword);
   }
 }

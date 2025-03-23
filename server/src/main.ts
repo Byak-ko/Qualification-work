@@ -3,14 +3,16 @@ import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.use(cookieParser());
   app.enableCors({
-    origin: 'http://localhost:5173',  
+    origin: process.env.FRONTEND_URL,  
     credentials: true,  
   });
 
@@ -19,7 +21,7 @@ async function bootstrap() {
     .setDescription('A system of teacher rating with multi-level verification of higher education institutions')
     .setVersion('1.0')
     .addTag('users', 'Операції з користувачами') 
-    .addTag('raings', 'Операції з рейтингами')
+    .addTag('ratings', 'Операції з рейтингами')
     .addTag('auth', 'Авторизація та аутентифікація')
     .build();
   

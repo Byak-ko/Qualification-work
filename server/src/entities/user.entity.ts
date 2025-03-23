@@ -46,12 +46,4 @@ export class User {
 
   @OneToMany(() => RatingApproval, (approval) => approval.reviewer)
   approvals: RatingApproval[];
-
-  @BeforeInsert()
-  @BeforeUpdate()
-  async hashPassword() {
-    if (this.password) {
-      this.password = await bcrypt.hash(this.password, 10);
-    }
-  }
 }
