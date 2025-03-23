@@ -1,15 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
-import HomePage from "../pages/HomePage";
-import AdminUsersPage from "../pages/AdminUsersPage";
-import CreateRatingPage from "../pages/CreateRatingPage";
+import HomePage from "../pages/home/HomePage";
+import AdminUsersPage from "../pages/user-managment/AdminUsersPage";
+import CreateRatingPage from "../pages/create-rating/CreateRatingPage";
 import ReportsPage from "../pages/ReportsPage";
-import LoginPage from "../pages/LoginPage";
+import LoginPage from "../pages/login/LoginPage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import PageFallback from "../components/PageFallback";
 import { Role } from "../types/User";
-import UnitsDepartmentsPage from "../pages/UnitsDepartmentsPage";
-import FillRatingPage from "../pages/FillRatingPage";
+import UnitsDepartmentsPage from "../pages/unit-managment/UnitsDepartmentsPage";
+import FillRatingPage from "../pages/fill-rating/FillRatingPage";
+import UserProfilePage from "../pages/user-profile/UserProfilePage";
+import ReviewRatingPage from "../pages/rating-review/ReviewRatingPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 export const router = createBrowserRouter([
   {
@@ -51,11 +54,20 @@ export const router = createBrowserRouter([
       {
         path: "ratings/:id/fill",
         element: (
-          <ProtectedRoute allowedRoles={[Role.ADMIN]}>
+          <ProtectedRoute allowedRoles={[Role.TEACHER]}>
             <FillRatingPage />
           </ProtectedRoute>
         ),
       },
+      {
+        path: "ratings/:id/review",
+        element: (
+          <ProtectedRoute>
+            <ReviewRatingPage />
+          </ProtectedRoute>
+        ),
+      },
+      
       {
         path: "reports",
         element: (
@@ -64,7 +76,19 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute>
+            <UserProfilePage />
+          </ProtectedRoute>
+        ),
+      }
     ],
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
   },
   {
     path: "/login",
