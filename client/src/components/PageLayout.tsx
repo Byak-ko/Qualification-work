@@ -5,11 +5,10 @@ import { useAuth } from "./AuthProvider"
 import { Role } from "../types/User"
 import NProgress from "nprogress"
 import "nprogress/nprogress.css"
-import { useTheme } from "./ThemeProvider"
+import Breadcrumbs from "./Breadcrumbs"
 
 const PageLayout = () => {
   const { currentUser, logout } = useAuth()
-  const { theme, toggleTheme } = useTheme()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const location = useLocation()
   
@@ -92,13 +91,6 @@ const PageLayout = () => {
 
               <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
 
-              <button
-                onClick={toggleTheme}
-                className="block w-full text-left px-4 py-3 rounded-xl text-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-              >
-                {theme === "light" ? "🌙 Темна тема" : "☀️ Світла тема"}
-              </button>
-
               <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
 
               <button
@@ -116,6 +108,7 @@ const PageLayout = () => {
       </AnimatePresence>
       
       <main className="p-6 flex-grow bg-white bg-white text-gray-900 dark:text-gray-200 rounded-lg shadow-md m-4">
+        <Breadcrumbs />
         <Outlet />
       </main>
     </div>
