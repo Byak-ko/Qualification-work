@@ -1,4 +1,4 @@
-import DeleteIcon from "../../components/ui/icons/DeleteIcon";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import Input from "../../components/ui/Input";
 
 interface Item {
@@ -44,7 +44,7 @@ export default function RatingItemsEditor({ items, onChange, onAdd, onRemove }: 
                 onClick={() => onRemove(index)}
                 className="text-red-500 hover:text-red-700 transition duration-200"
               >
-                <DeleteIcon />
+                <TrashIcon />
               </button>
             )}
           </div>

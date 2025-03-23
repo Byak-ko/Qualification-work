@@ -1,5 +1,5 @@
 import Input from "../../components/ui/Input";
-import DeleteIcon from "../../components/ui/icons/DeleteIcon";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 type Props = {
   item: {
@@ -68,7 +68,7 @@ export default function RatingItemBlock({
                 onClick={() => onFileRemove(index, fileIdx)}
                 className="ml-3 text-red-500 hover:text-red-700 text-xs font-medium transition"
               >
-                <DeleteIcon />
+                <TrashIcon />
               </button>
             </li>
           ))}
