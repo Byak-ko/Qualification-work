@@ -1,73 +1,75 @@
 import {
   createContext,
-  PropsWithChildren,
   useContext,
   useEffect,
-  useLayoutEffect,
   useState,
+  PropsWithChildren,
 } from "react";
 import { User } from "../types/User";
 import { api } from "../services/api/api";
 import { AxiosError } from "axios";
 
-type AuthContext = {
+type AuthContextType = {
   currentUser?: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: boolean; message: string }>;
   logout: () => Promise<{ error: boolean; message: string }>;
 };
 
-type AuthProviderProps = PropsWithChildren;
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext = createContext<AuthContext | undefined>(undefined);
-
-const AuthProvider = ({ children }: AuthProviderProps) => {
+export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-
-    const fetchUser = async () => {
+    const tryRefresh = async () => {
       try {
-        const response = await api.get("/users/current");
-        setCurrentUser(response.data);
+        const response = await api.post("/auth/refresh", null, {
+          withCredentials: true,
+        });
+        const accessToken = response.data.access_token;
+        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+
+        const userRes = await api.get("/users/current", {
+          withCredentials: true,
+        });
+        setCurrentUser(userRes.data);
       } catch {
         setCurrentUser(null);
       } finally {
-        setIsLoading(false); 
+        setIsLoading(false);
       }
     };
 
-    fetchUser();
+    tryRefresh();
   }, []);
-
-  useLayoutEffect(() => {
-    const refreshInterceptor = api.interceptors.response.use(
-      (response) => response,
+  
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (res) => res,
       async (error) => {
         const originalRequest = error.config;
   
+      
+        if (error.response?.status === 401 && originalRequest.url.includes("/auth/login")) {
+          return Promise.reject(error);
+        }
+  
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-  
           try {
-            const response = await api.post("/auth/refresh", {
-              refreshToken: localStorage.getItem("refreshToken"),
+            const refreshRes = await api.post("/auth/refresh", null, {
+              withCredentials: true,
             });
   
-            const newAccessToken = response.data.access_token;
-            localStorage.setItem("token", newAccessToken);
+            const newAccessToken = refreshRes.data.access_token;
             api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+            originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
   
             return api(originalRequest);
-          } catch {
+          } catch (refreshErr) {
             setCurrentUser(null);
-            localStorage.removeItem("token");
-            localStorage.removeItem("refreshToken");
           }
         }
   
@@ -75,65 +77,69 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
   
-    return () => {
-      api.interceptors.response.eject(refreshInterceptor);
-    };
+    return () => api.interceptors.response.eject(interceptor);
   }, []);
-  
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post("/auth/login", { email, password });
-      const { access_token, refresh_token } = response.data;
-      localStorage.setItem("token", access_token);
-      localStorage.setItem("refreshToken", refresh_token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+      const res = await api.post(
+        "/auth/login",
+        { email, password },
+        { withCredentials: true }
+      );
 
-      const userResponse = await api.get("/users/current");
-      setCurrentUser(userResponse.data);
+      const token = res.data.access_token;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      return { error: false, message: "Login successful" }; 
+      const userRes = await api.get("/users/current", {
+        withCredentials: true,
+      });
+      setCurrentUser(userRes.data);
+
+      return { error: false, message: "Успішний вхід" };
     } catch (err) {
-      setCurrentUser(null);
       const message =
         ((err as AxiosError).response?.data as { message: string })?.message ||
-        "Unable to login due to some internal reasons, please try again later";
+        "Помилка при вході";
       return { error: true, message };
     }
   };
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("/auth/logout", null, { withCredentials: true });
       setCurrentUser(null);
-      localStorage.removeItem("token");
-
-      return { error: false, message: "Logout successful" };
+      delete api.defaults.headers.common["Authorization"];
+      return { error: false, message: "Успішний вихід" };
     } catch (err) {
       return {
         error: true,
         message:
-          (err as Error).message ?? "Unable to logout due some internal reasons, please try again later",
+          (err as AxiosError).message ??
+          "Не вдалося вийти з акаунту, спробуйте ще раз",
       };
     }
   };
 
-  const authProviderValues = {
-    currentUser,
-    isLoading,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={authProviderValues}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        isLoading,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuthContext should be used inside of AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 };
+
 
 export default AuthProvider;
