@@ -1,5 +1,12 @@
 import { User } from "../../types/User";
-import { BuildingOfficeIcon, EnvelopeIcon, UserIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  BuildingOfficeIcon,
+  EnvelopeIcon,
+  UserIcon,
+  XMarkIcon,
+  AcademicCapIcon,
+  BriefcaseIcon
+} from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import { Role } from "../../types/User";
 
@@ -10,8 +17,41 @@ interface UserInfoModalProps {
   departmentName?: string;
 }
 
-export default function UserInfoModal({ isOpen, onClose, user, departmentName }: UserInfoModalProps) {
+export default function UserInfoModal({
+  isOpen,
+  onClose,
+  user,
+  departmentName
+}: UserInfoModalProps) {
   if (!user) return null;
+
+  const userInfoItems = [
+    {
+      icon: <EnvelopeIcon className="w-5 h-5 text-blue-500" />,
+      label: "Email",
+      value: user.email
+    },
+    {
+      icon: <UserIcon className="w-5 h-5 text-green-500" />,
+      label: "Роль",
+      value: user.role === Role.ADMIN ? "Адміністратор" : "Викладач"
+    },
+    {
+      icon: <BuildingOfficeIcon className="w-5 h-5 text-purple-500" />,
+      label: "Кафедра",
+      value: departmentName || "—"
+    },
+    {
+      icon: <BriefcaseIcon className="w-5 h-5 text-orange-500" />,
+      label: "Посада",
+      value: user.position || "—"
+    },
+    {
+      icon: <AcademicCapIcon className="w-5 h-5 text-teal-500" />,
+      label: "Науковий ступінь",
+      value: user.degree || "—"
+    }
+  ];
 
   return (
     <AnimatePresence>
@@ -19,7 +59,7 @@ export default function UserInfoModal({ isOpen, onClose, user, departmentName }:
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/40 z-40"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -28,31 +68,92 @@ export default function UserInfoModal({ isOpen, onClose, user, departmentName }:
           {/* Modal */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            initial={{
+              opacity: 0,
+              scale: 0.9,
+              translateY: 50
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              translateY: 0
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0.9,
+              translateY: 50
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 20
+            }}
           >
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
-              <button
-                onClick={onClose}
-                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 transition"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">Інформація про користувача</h2>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p><span className="font-medium">Прізвище та Ім’я:</span> {user.lastName} {user.firstName}</p>
-                <p className="flex items-center gap-1"><EnvelopeIcon className="w-4 h-4" /> {user.email}</p>
-                <p className="flex items-center gap-1"><UserIcon className="w-4 h-4" /> {user.role === Role.ADMIN ? "Адміністратор" : "Викладач"}</p>
-                <p className="flex items-center gap-1"><BuildingOfficeIcon className="w-4 h-4" /> {departmentName}</p>
-                <p><span className="font-medium">Посада:</span> {user.position || "—"}</p>
-                <p><span className="font-medium">Науковий ступінь:</span> {user.degree || "—"}</p>
-              </div>
-              <div className="mt-6 flex justify-end">
+            <div className="bg-white rounded-2xl shadow-2xl 
+                            w-full max-w-md 
+                            border border-gray-100 
+                            overflow-hidden 
+                            relative">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-white 
+                              px-6 py-4 
+                              border-b border-gray-100 
+                              flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {user.lastName} {user.firstName}
+                  </h2>
+                  <p className="text-sm text-gray-500">Інформація про користувача</p>
+                </div>
+
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                  className="text-gray-500 hover:text-gray-800 
+                             bg-gray-100 hover:bg-gray-200 
+                             rounded-full p-2 
+                             transition-all duration-300"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* User Details */}
+              <div className="p-6 space-y-4">
+                {userInfoItems.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 
+                               bg-gray-50 p-3 rounded-lg 
+                               transition-colors duration-300 
+                               hover:bg-gray-100"
+                  >
+                    {item.icon}
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">
+                        {item.label}
+                      </p>
+                      <p className="text-sm text-gray-800 font-medium">
+                        {item.value}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2 
+                             bg-blue-600 text-white 
+                             rounded-lg 
+                             hover:bg-blue-700 
+                             focus:outline-none 
+                             focus:ring-2 
+                             focus:ring-blue-500 
+                             focus:ring-offset-2 
+                             transition-all 
+                             duration-300"
                 >
                   Закрити
                 </button>

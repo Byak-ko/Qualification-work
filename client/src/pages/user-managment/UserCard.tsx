@@ -7,7 +7,6 @@ import {
   UserIcon,
   BuildingOfficeIcon,
 } from "@heroicons/react/24/outline";
-import Button from "../../components/ui/Button";
 import UserInfoModal from "./UserInfoModal";
 import { motion } from "framer-motion";
 
@@ -25,37 +24,85 @@ export default function UserCard({
   onDelete,
 }: UserCardProps) {
   const [infoOpen, setInfoOpen] = useState(false);
-
   return (
     <>
       <motion.li
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      whileHover={{ scale: 1.02, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
-      transition={{ duration: 0.2 }}
-      layout
-      className="border rounded p-4 flex justify-between text-gray-600 items-center bg-white cursor-pointer"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        whileHover={{
+          scale: 1.02,
+          transition: { duration: 0.2 }
+        }}
+        className="group relative border-2 border-transparent rounded-xl p-5
+                   flex justify-between items-center
+                   bg-white shadow-lg hover:shadow-xl
+                   hover:border-blue-100
+                   transition-all duration-300 ease-in-out
+                   hover:bg-blue-50/30"
         onClick={() => setInfoOpen(true)}
       >
-        <div>
-          <p className="font-semibold">{user.lastName} {user.firstName}</p>
-          <p className="flex items-center gap-1 text-sm text-gray-600">
-            <EnvelopeIcon className="w-4 h-4" /> {user.email}
-          </p>
-          <p className="flex items-center gap-1 text-sm text-gray-600">
-            <UserIcon className="w-4 h-4" /> {user.role === Role.ADMIN ? "Адміністратор" : "Викладач"}
-          </p>
-          <p className="flex items-center gap-1 text-sm text-gray-600">
-            <BuildingOfficeIcon className="w-4 h-4" /> {departmentName}
-          </p>
+        <div className="space-y-2 w-full pr-24">
+          <h3 className="text-lg font-bold text-gray-800
+                         group-hover:text-blue-700
+                         transition-colors duration-300 truncate">
+            {user.lastName} {user.firstName}
+          </h3>
+          <div className="space-y-1.5">
+            {[
+              {
+                icon: <EnvelopeIcon className="w-5 h-5 text-blue-500" />,
+                text: user.email
+              },
+              {
+                icon: <UserIcon className="w-5 h-5 text-green-500" />,
+                text: user.role === Role.ADMIN ? "Адміністратор" : "Викладач"
+              },
+              {
+                icon: <BuildingOfficeIcon className="w-5 h-5 text-purple-500" />,
+                text: departmentName
+              }
+            ].map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 text-sm text-gray-600
+                           group-hover:text-gray-800
+                           transition-colors duration-300 truncate"
+              >
+                {item.icon}
+                <span className="truncate">{item.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2 z-10" onClick={(e) => e.stopPropagation()}>
-          <Button onClick={onEdit} icon={<PencilIcon />} variant="secondary">Редагувати</Button>
-          <Button onClick={onDelete} icon={<TrashIcon />} variant="danger">Видалити</Button>
+        <div
+          className="absolute top-4 right-4 flex gap-2 opacity-0
+                     group-hover:opacity-100
+                     transition-opacity duration-300 z-10"
+        >
+          <div
+            className="flex flex-col gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={onEdit}
+              className="text-yellow-500 hover:text-yellow-600 
+                         bg-yellow-50 p-1.5 rounded-md 
+                         transition-colors duration-200"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="text-red-500 hover:text-red-600
+                         bg-red-50 p-1.5 rounded-md 
+                         transition-colors duration-200"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        </motion.li>
-
+      </motion.li>
       <UserInfoModal
         isOpen={infoOpen}
         onClose={() => setInfoOpen(false)}

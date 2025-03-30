@@ -11,12 +11,11 @@ import UserList from "./UserList";
 import UserFormModal from "./UserFormModal";
 import DeleteUserModal from "./DeleteUserModal";
 
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon,UserGroupIcon } from "@heroicons/react/24/outline";
 
 const userSchema = yup.object({
   lastName: yup.string().required("Прізвище обов’язкове"),
   firstName: yup.string().required("Ім’я обов’язкове"),
-  email: yup.string().email("Некоректний email").required("Email обов’язковий"),
   role: yup.string().oneOf(Object.values(Role), "Невірна роль"),
   departmentId: yup.number().required("Кафедра обов’язкова"),
   degree: yup.string().required("Ступінь обов’язковий"),
@@ -104,45 +103,72 @@ export default function AdminUsersPage() {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl text-gray-600 font-bold">Користувачі</h1>
-        <Button onClick={() => {
-          setSelectedUser(null);
-          setModalState({ ...modalState, edit: true });
-          
-        }}icon={<PlusIcon />}>
-          Додати користувача
-        </Button>
+    <div className="bg-gray-50 min-h-screen py-12">
+      <div className="p-6 max-w-6xl mx-auto bg-white rounded-2xl shadow-xl">
+        {/* Page Header */}
+        <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
+          <div className="flex items-center space-x-4">
+            <UserGroupIcon className="w-10 h-10 text-blue-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Управління користувачами
+              </h1>
+              <p className="text-gray-500">
+                Загалом {users.length} користувачів
+              </p>
+            </div>
+          </div>
+
+          <Button 
+            onClick={() => {
+              setSelectedUser(null);
+              setModalState({ ...modalState, edit: true });
+            }}
+            icon={<PlusIcon className="w-5 h-5" />}
+            className="flex items-center space-x-2 
+                       bg-blue-600 text-white 
+                       hover:bg-blue-700 
+                       transition-colors duration-300"
+          >
+            Додати користувача
+          </Button>
+        </div>
+
+        {/* Search Section */}
+        <div className="mb-6">
+          <UserSearch 
+            search={search} 
+            onChange={setSearch} 
+          />
+        </div>
+
+        {/* User List */}
+        <UserList
+          users={filteredUsers}
+          onEdit={(user) => {
+            setSelectedUser(user);
+            setModalState({ ...modalState, edit: true });
+          }}
+          onDelete={(userId) => {
+            setDeleteUserId(userId);
+            setModalState({ ...modalState, confirm: true });
+          }}
+        />
+
+        {/* Modals */}
+        <UserFormModal
+          isOpen={modalState.edit}
+          onClose={() => setModalState({ ...modalState, edit: false })}
+          onSubmit={handleUserSubmit}
+          departments={departments}
+          user={selectedUser}
+        />
+        <DeleteUserModal
+          isOpen={modalState.confirm}
+          onClose={() => setModalState({ ...modalState, confirm: false })}
+          onSubmit={handleDeleteUser}
+        />
       </div>
-
-      <UserSearch search={search} onChange={setSearch} />
-
-      <UserList
-        users={filteredUsers}
-        onEdit={(user) => {
-          setSelectedUser(user);
-          setModalState({ ...modalState, edit: true });
-        }}
-        onDelete={(userId) => {
-          setDeleteUserId(userId);
-          setModalState({ ...modalState, confirm: true });
-        }}
-      />
-
-      <UserFormModal
-        isOpen={modalState.edit}
-        onClose={() => setModalState({ ...modalState, edit: false })}
-        onSubmit={handleUserSubmit}
-        departments={departments}
-        user={selectedUser}
-      />
-
-      <DeleteUserModal
-        isOpen={modalState.confirm}
-        onClose={() => setModalState({ ...modalState, confirm: false })}
-        onSubmit={handleDeleteUser}
-      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import { api } from "./api";
-import { Rating, RatingApproval } from "../../types/Rating";
+import { RatingApproval } from "../../types/Rating";
 
-export const getRatingById = (id: number) =>
-  api.get<Rating>(`/ratings/${id}/review`);
-export const submitReview = (id: number, payload: RatingApproval) =>
-  api.post(`/ratings/${id}/review`, payload);
+export const getRatingForReview = async (ratingId: number, respondentId: number) => {
+  const response = await api.get(`/ratings/${ratingId}/review/${respondentId}`);
+  return response.data;
+};
 
-export const updateItemComment = (itemId: number, comment: string) =>
-  api.patch(`/ratings/items/${itemId}/comment`, { comment });
+export const submitReview = async (ratingId: number, respondentId: number, payload: RatingApproval) => {
+  const response = await api.post(`/ratings/${ratingId}/review/${respondentId}`, payload);
+  return response.data;
+};
