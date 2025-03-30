@@ -124,8 +124,7 @@ export class AuthService {
       const payload: any = this.jwtService.verify(token, { secret: process.env.JWT_RESET_SECRET });
       const user = await this.userService.findById(payload.userId);
       if (!user) throw new NotFoundException("Користувача не знайдено.");
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await this.userService.updatePassword(user.id, hashedPassword);
+      await this.userService.updatePassword(user.id, newPassword);
 
       return { message: "Пароль успішно змінено." };
     } catch (error) {

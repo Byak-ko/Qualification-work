@@ -90,10 +90,21 @@ export class UserService {
     if (!user) {
       throw new NotFoundException("Користувача не знайдено");
     }
-    user.password = newPassword
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword
     await this.userRepository.save(user);
 
     return { message: "Пароль успішно оновлено" };
+  }
+
+  async updateEmail(id: number, newEmail: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException("Користувача не знайдено");
+    }
+    user.email = newEmail;
+    await this.userRepository.save(user);
+    return { message: "Емейл успішно оновлено" };
   }
 
   async delete(id: number) {

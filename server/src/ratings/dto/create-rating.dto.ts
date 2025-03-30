@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsString, ValidateNested, ArrayMinSize, IsNumber } from 'class-validator';
+import { IsArray, IsNotEmpty, IsString, ValidateNested, ArrayMinSize, IsNumber, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateRatingDto {
@@ -10,9 +10,9 @@ export class CreateRatingDto {
   @IsNotEmpty()
   type: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  respondentId: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  respondentIds: number[]
 
   @IsArray()
   @ArrayMinSize(1)
@@ -30,4 +30,11 @@ export class RatingItemDto {
 
   @IsNumber()
   maxScore: number;
+
+  @IsOptional()
+  @IsNumber()
+  id?: number;
+
+  @IsString()
+  comment: string;
 }

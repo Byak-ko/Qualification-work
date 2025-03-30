@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { RatingItem } from './rating-item.entity';
+import { RatingResponse } from './rating-response.entity';
 
 @Entity()
 export class Document {
@@ -9,6 +10,6 @@ export class Document {
   @Column()
   url: string;
 
-  @ManyToOne(() => RatingItem, (item) => item.documents, { onDelete: 'CASCADE' })
-  ratingItem: RatingItem;
+  @ManyToOne(() => RatingResponse, (response) => response.documents)
+  response: RatingResponse;
 }

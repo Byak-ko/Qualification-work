@@ -8,6 +8,8 @@ import { User } from '../entities/user.entity'
 import { RatingItem } from '../entities/rating-item.entity'
 import { RatingApproval } from '../entities/rating-approval.entity'
 import { Document } from 'src/entities/document.entity'
+import { RatingParticipant } from '../entities/rating-participant.entity'
+import { RatingResponse } from '../entities/rating-response.entity'
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { Document } from 'src/entities/document.entity'
       User,
       RatingItem,
       RatingApproval,
+      RatingParticipant,
+      RatingResponse,
       Document,
     ]),
   ],

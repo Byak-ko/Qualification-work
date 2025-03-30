@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Req, Delete, Body, Param, UseGuards, ConflictException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Req, Delete, Body, Param, UseGuards, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './users.service';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -118,6 +118,30 @@ export class UsersController {
     }
     
     return this.userService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/password')
+  async changePassword(
+    @Param('id') id: string,
+    @Body() body: { password: string; confirmPassword: string },
+  ): Promise<string> {
+    const { password, confirmPassword } = body;
+    if (password !== confirmPassword) {
+      throw new UnauthorizedException('Паролі не співпадають');
+    }
+    const result = await this.userService.updatePassword(+id, password);
+    return result.message;
+  }
+
+  @Patch(':id/email')
+  async changeEmail(
+    @Param('id') id: string,
+    @Body() body: { email: string;},
+  ): Promise<string> {
+    const { email } = body;
+
+    const result = await this.userService.updatePassword(+id, email);
+    return result.message;
   }
 
   @Delete(':id')
