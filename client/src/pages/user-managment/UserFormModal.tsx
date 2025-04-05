@@ -1,4 +1,4 @@
-import { Role, User } from "../../types/User";
+import { Role, Degree, Position, User } from "../../types/User";
 import { Department } from "../../types/Department";
 import { motion, AnimatePresence } from "framer-motion";
 import EditModal from "../../components/EditModal";
@@ -9,7 +9,9 @@ interface UserFormModalProps {
   departments: Department[];
   onClose: () => void;
   onSubmit: (data: Partial<User>) => void;
+  isSubmitting: boolean;
 }
+
 
 export default function UserFormModal({
   isOpen,
@@ -17,12 +19,18 @@ export default function UserFormModal({
   departments,
   onClose,
   onSubmit,
+  isSubmitting,
 }: UserFormModalProps) {
+
+  const getEnumKey = (enumObj: any, value: string) => {
+    return Object.entries(enumObj).find(([val]) => val === value)?.[0] || "";
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -39,9 +47,10 @@ export default function UserFormModal({
               title={user ? "Редагувати користувача" : "Новий користувач"}
               onClose={onClose}
               onSubmit={onSubmit}
+              isSubmitting={isSubmitting}
               fields={[
                 { name: "lastName", label: "Прізвище", defaultValue: user?.lastName || "" },
-                { name: "firstName", label: "Ім’я", defaultValue: user?.firstName || "" },
+                { name: "firstName", label: "Ім'я", defaultValue: user?.firstName || "" },
                 ...(!user
                   ? [
                       {
@@ -51,8 +60,26 @@ export default function UserFormModal({
                       },
                     ]
                   : []),
-                { name: "degree", label: "Ступінь", defaultValue: user?.degree || "" },
-                { name: "position", label: "Посада", defaultValue: user?.position || "" },
+                {
+                  name: "degree",
+                  label: "Науковий ступінь",
+                  type: "select",
+                  defaultValue: user ? getEnumKey(Degree, user.degree): "NONE",
+                  options: Object.entries(Degree).map(([key, value]) => ({
+                    label: value,
+                    value: key,
+                  })),
+                },
+                {
+                  name: "position",
+                  label: "Посада",
+                  type: "select",
+                  defaultValue: user ? getEnumKey(Position, user.position) : "LECTURER",
+                  options: Object.entries(Position).map(([key, value]) => ({
+                    label: value,
+                    value: key,
+                  })),
+                },
                 {
                   name: "role",
                   label: "Роль",
