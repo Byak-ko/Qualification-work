@@ -1,12 +1,14 @@
-import { TrashIcon, PlusIcon, DocumentDuplicateIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, PlusIcon, DocumentDuplicateIcon, ChatBubbleLeftIcon, DocumentIcon } from "@heroicons/react/24/outline";
 import Input from "../../components/ui/Input";
 import { RatingItem } from "../../types/Rating";
 
-export type Item = Omit<RatingItem, "id" | "score" | "documents">;
+export type Item = Omit<RatingItem, "id" | "score" | "documents"> & {
+  isDocNeed?: boolean;
+};
 
 interface Props {
   items: Item[];
-  onChange: (index: number, field: string, value: string | number) => void;
+  onChange: (index: number, field: string, value: string | number | boolean) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -64,6 +66,21 @@ export default function RatingItemsEditor({ items, onChange, onAdd, onRemove }: 
                 className="w-full"
                 label="Коментар"
               />
+            </div>
+            <div className="mt-3 flex items-center">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`isDocNeed-${index}`}
+                  checked={item.isDocNeed || false}
+                  onChange={(e) => onChange(index, "isDocNeed", e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor={`isDocNeed-${index}`} className="ml-2 block text-sm text-gray-700 flex items-center">
+                  <DocumentIcon className="w-5 h-5 text-blue-500 mr-1" />
+                  Потрібно прикріпити документ
+                </label>
+              </div>
             </div>
           </div>
         ))}

@@ -19,17 +19,21 @@ import {
   PlusCircleIcon
 } from '@heroicons/react/24/outline';
 
-export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents">;
+export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents"> & { 
+  isDocNeed?: boolean;
+  id?: number; // Make id optional for new items
+};
 
 export default function EditRatingPage() {
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [selectedRespondentIds, setSelectedRespondentIds] = useState<number[]>([]);
-  const [items, setItems] = useState<EditableRatingItem[]>([{ name: "", maxScore: 10, comment: "" }]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [items, setItems] = useState<EditableRatingItem[]>([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedReviewerIds, setSelectedReviewerIds] = useState<number[]>([]);
+  
+  const [departmentReviewerIds, setDepartmentReviewerIds] = useState<number[]>([]);
+  const [unitReviewerIds, setUnitReviewerIds] = useState<number[]>([]);
 
   const { currentUser } = useAuth();
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -47,25 +51,51 @@ export default function EditRatingPage() {
       }
     };
   
-
     const fetchRatingDetails = async () => {
       try {
         const ratingRes = await api.get<Rating>(`/ratings/${id}`);
         const rating = ratingRes.data;
-
+        console.log(rating);
         setName(rating.name);
         setType(rating.type);
         setSelectedRespondentIds(rating.participants.map(({ respondent }) => respondent.id));
-        setSelectedReviewerIds(rating.reviewers.map(r => r.id).filter(reviewerId => reviewerId !== currentUser?.id));
+        
+        if (rating.departmentReviewers) {
+          setDepartmentReviewerIds(rating.departmentReviewers.map((reviewer: User) => reviewer.id));
+        }
+        
+        if (rating.unitReviewers) {
+          setUnitReviewerIds(rating.unitReviewers.map((reviewer: User) => reviewer.id));
+        }
+        
+        // Fallback if API doesn't return separate arrays
+        if (!rating.departmentReviewers || !rating.unitReviewers) {
+          const departmentIds: number[] = [];
+          const unitIds: number[] = [];
+          
+          // Find unique departmentReviewers and unitReviewers from participants
+          rating.participants.forEach(participant => {
+            if (participant.departmentReviewer && !departmentIds.includes(participant.departmentReviewer.id)) {
+              departmentIds.push(participant.departmentReviewer.id);
+            }
+            
+            if (participant.unitReviewer && !unitIds.includes(participant.unitReviewer.id)) {
+              unitIds.push(participant.unitReviewer.id);
+            }
+          });
+          
+          setDepartmentReviewerIds(departmentIds);
+          setUnitReviewerIds(unitIds);
+        }
+        
+        // Adapt items with isDocNeed field
         setItems(rating.items.map(item => ({
           id: item.id,
           name: item.name,
           maxScore: item.maxScore,
-          comment: item.comment || ""
+          comment: item.comment || "",
+          isDocNeed: item.isDocNeed
         })));
-
-        const filteredUsers = allUsers.filter((user) => user.id !== currentUser?.id);
-        setUsers(filteredUsers);
       } catch (err) {
         toast.error("Помилка при завантаженні деталей рейтингу");
         navigate("/ratings");
@@ -76,12 +106,6 @@ export default function EditRatingPage() {
     if (id) fetchRatingDetails();
   }, [id, currentUser?.id, navigate]);
 
-  const filteredUsers = users.filter((user) =>
-    `${user.firstName} ${user.lastName}`
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
-
   const handleRespondentChange = (userId: number) => {
     setSelectedRespondentIds(prev =>
       prev.includes(userId)
@@ -90,20 +114,26 @@ export default function EditRatingPage() {
     );
   };
 
+  const handleMultipleRespondentChange = (userIds: number[]) => {
+    setSelectedRespondentIds(userIds);
+  };
+
   const handleItemChange = (
     index: number,
     field: string,
-    value: string | number
+    value: string | number | boolean
   ) => {
     const updated = [...items];
     updated[index] = {
       ...updated[index],
-      [field]: field === "maxScore" ? Number(value) : value,
+      [field]: 
+        field === "maxScore" ? Number(value) : 
+        field === "isDocNeed" ? Boolean(value) : value,
     };
     setItems(updated);
   };
 
-  const handleAddItem = () => setItems([...items, { name: "", maxScore: 10, comment: "" }]);
+  const handleAddItem = () => setItems([...items, { name: "", maxScore: 10, comment: "", isDocNeed: false }]);
 
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
@@ -130,12 +160,14 @@ export default function EditRatingPage() {
 
     try {
       setIsSubmitting(true);
-      const reviewerIds = [currentUser?.id, ...selectedReviewerIds].filter(Boolean) as number[];
+      const reviewerDepartmentsIds = departmentReviewerIds;
+      const reviewerUnitsIds = unitReviewerIds;
       const payload = {
         name,
         type,
         respondentIds: selectedRespondentIds,
-        reviewerIds,
+        reviewerDepartmentsIds,
+        reviewerUnitsIds,
         items
       };
       console.log("PAYLOAD", payload);
@@ -169,66 +201,41 @@ export default function EditRatingPage() {
         </div>
 
         {/* Form Container */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Rating Basic Info */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Input
-              label="Назва рейтингу"
-              type="text"
-              placeholder="Введіть назву рейтингу"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="shadow-sm"
-              icon={<DocumentPlusIcon className="w-5 h-5 text-blue-500" />}
-            />
-
-            <Input
-              label="Тип рейтингу"
-              type="text"
-              placeholder="Введіть тип рейтингу"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="shadow-sm"
-              icon={<ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />}
-            />
-          </div>
-
-          {/* Respondent Selector */}
-          <div className="space-y-2">
-            <div className="flex items-center text-blue-800 space-x-2">
-              <UserGroupIcon className="w-6 h-6" />
-              <h2 className="text-lg font-semibold">Оберіть респондентів</h2>
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+            <div className="flex items-center text-blue-800 mb-4">
+              <DocumentPlusIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-bold">Основна інформація</h2>
             </div>
-            <RespondentSelector
-              users={allUsers} //filtered users
-              selectedRespondentIds={selectedRespondentIds}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onSelect={handleRespondentChange}
-            />
-          </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Input
+                label="Назва рейтингу"
+                type="text"
+                placeholder="Введіть назву рейтингу"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="shadow-sm"
+                icon={<DocumentPlusIcon className="w-5 h-5 text-blue-500" />}
+              />
 
-          {/* Reviewer Selector */}
-          {currentUser && (
-            <div className="space-y-2">
-              <div className="flex items-center text-blue-800 space-x-2">
-                <UserGroupIcon className="w-6 h-6" />
-                <h2 className="text-lg font-semibold">Оберіть рецензентів</h2>
-              </div>
-              <ReviewerSelector
-                allUsers={allUsers}
-                currentUser={currentUser}
-                selectedReviewerIds={selectedReviewerIds}
-                setSelectedReviewerIds={setSelectedReviewerIds}
+              <Input
+                label="Тип рейтингу"
+                type="text"
+                placeholder="Введіть тип рейтингу"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="shadow-sm"
+                icon={<ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />}
               />
             </div>
-          )}
+          </div>
 
           {/* Rating Items Editor */}
-          <div className="space-y-2">
-            <div className="flex items-center text-blue-800 space-x-2">
-              <ClipboardDocumentListIcon className="w-6 h-6" />
-              <h2 className="text-lg font-semibold">Критерії оцінювання</h2>
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+            <div className="flex items-center text-blue-800 mb-4">
+              <ClipboardDocumentListIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-bold">Критерії оцінювання</h2>
             </div>
             <RatingItemsEditor
               items={items}
@@ -237,6 +244,44 @@ export default function EditRatingPage() {
               onRemove={handleRemoveItem}
             />
           </div>
+
+          {/* Respondent Selector */}
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+            <div className="flex items-center text-blue-800 mb-4">
+              <UserGroupIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-bold">Респонденти</h2>
+            </div>
+            <RespondentSelector
+              users={allUsers}
+              selectedRespondentIds={selectedRespondentIds}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSelect={handleRespondentChange}
+              onSelectMultiple={handleMultipleRespondentChange}
+            />
+          </div>
+
+          {/* Reviewer Selector */}
+          {currentUser && selectedRespondentIds.length > 0 && (
+            <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+              <div className="flex items-center text-blue-800 mb-4">
+                <UserGroupIcon className="w-6 h-6 mr-2" />
+                <h2 className="text-xl font-bold">Рецензенти</h2>
+                <span className="text-sm text-gray-500 ml-2">
+                  (максимум 1 особа з кожної кафедри та підрозділу респондентів)
+                </span>
+              </div>
+              <ReviewerSelector
+                allUsers={allUsers}
+                currentUser={currentUser}
+                selectedDepartmentReviewerIds={departmentReviewerIds}
+                setDepartmentReviewerIds={setDepartmentReviewerIds}
+                selectedUnitReviewerIds={unitReviewerIds}
+                setUnitReviewerIds={setUnitReviewerIds}
+                selectedRespondentIds={selectedRespondentIds}
+              />
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="pt-4">
@@ -247,7 +292,7 @@ export default function EditRatingPage() {
             >
               {isSubmitting ? (
                 <>
-                  <Spinner />
+                  <Spinner size="small"/>
                   <span>Оновлення...</span>
                 </>
               ) : (

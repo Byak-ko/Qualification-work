@@ -1,47 +1,338 @@
 import { useState, useEffect } from "react";
-import { MagnifyingGlassIcon, UserIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, UserIcon, CheckIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { User } from "../../types/User";
 import Input from "../../components/ui/Input";
 
 type Props = {
   allUsers: User[];
   currentUser: User;
-  selectedReviewerIds: number[];
-  setSelectedReviewerIds: React.Dispatch<React.SetStateAction<number[]>>;
+  selectedDepartmentReviewerIds: number[];
+  setDepartmentReviewerIds: React.Dispatch<React.SetStateAction<number[]>>;
+  selectedUnitReviewerIds: number[];
+  setUnitReviewerIds: React.Dispatch<React.SetStateAction<number[]>>;
+  selectedRespondentIds: number[];
 };
 
 export default function ReviewerSelector({
   allUsers,
   currentUser,
-  selectedReviewerIds,
-  setSelectedReviewerIds,
+  selectedDepartmentReviewerIds,
+  setDepartmentReviewerIds,
+  selectedUnitReviewerIds,
+  setUnitReviewerIds,
+  selectedRespondentIds,
 }: Props) {
   const [search, setSearch] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  
+  // Відстеження департаментів і підрозділів
+  const [eligibleDepartments, setEligibleDepartments] = useState<Set<string>>(new Set());
+  const [eligibleUnits, setEligibleUnits] = useState<Set<string>>(new Set());
+  
+  // Відстеження вибраних кафедр і підрозділів
+  const [selectedDepartmentMap, setSelectedDepartmentMap] = useState<Map<string, number>>(new Map());
+  const [selectedUnitMap, setSelectedUnitMap] = useState<Map<string, number>>(new Map());
+  
+  // Розділені списки користувачів
+  const [departmentUsers, setDepartmentUsers] = useState<User[]>([]);
+  const [unitUsers, setUnitUsers] = useState<User[]>([]);
+  
+  // Відстеження попередніх респондентів для відслідковування змін
+  const [prevRespondentIds, setPrevRespondentIds] = useState<number[]>([]);
 
+  // Скидання вибраних рецензентів при зміні респондентів
   useEffect(() => {
-    const updatedFilteredUsers = allUsers.filter(
-      (user) => user.id !== currentUser.id
-    );
-    setFilteredUsers(updatedFilteredUsers);
-  }, [allUsers, currentUser.id]);
+    const hasChanged = selectedRespondentIds.length !== prevRespondentIds.length || 
+      selectedRespondentIds.some(id => !prevRespondentIds.includes(id));
+    
+    if (hasChanged) {
+      setDepartmentReviewerIds([]);
+      setUnitReviewerIds([]);
+      setPrevRespondentIds([...selectedRespondentIds]);
+    }
+  }, [selectedRespondentIds, prevRespondentIds, setDepartmentReviewerIds, setUnitReviewerIds]);
 
-  const toggleReviewer = (id: number) => {
-    setSelectedReviewerIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  // Визначення доступних департаментів і підрозділів на основі респондентів
+  useEffect(() => {
+    setEligibleDepartments(new Set());
+    setEligibleUnits(new Set());
+    
+    if (selectedRespondentIds.length === 0) return;
+
+    const departments = new Set<string>();
+    const units = new Set<string>();
+
+    selectedRespondentIds.forEach(id => {
+      const respondent = allUsers.find(user => user.id === id);
+      if (respondent) {
+        if (respondent.department?.name) {
+          departments.add(respondent.department.name);
+        }
+        if (respondent.department?.unit.name) {
+          units.add(respondent.department.unit.name);
+        }
+      }
+    });
+
+    setEligibleDepartments(departments);
+    setEligibleUnits(units);
+  }, [selectedRespondentIds, allUsers]);
+
+  // Фільтрування користувачів
+  useEffect(() => {
+    const usersExcludingCurrent = allUsers.filter(user => user.id !== currentUser.id);
+    setFilteredUsers(usersExcludingCurrent);
+    
+    // Створення окремих списків користувачів для департаментів і підрозділів
+    const deptUsers: User[] = [];
+    const unitUsersList: User[] = [];
+    
+    usersExcludingCurrent.forEach(user => {
+      let addToDepartments = false;
+      let addToUnits = false;
+      
+      // Перевірка департаменту
+      if (user.department?.name && eligibleDepartments.has(user.department.name)) {
+        addToDepartments = true;
+      }
+      
+      // Перевірка підрозділу
+      if (user.department?.unit.name && eligibleUnits.has(user.department.unit.name)) {
+        addToUnits = true;
+      }
+      
+      if (addToDepartments) {
+        deptUsers.push(user);
+      }
+      
+      if (addToUnits) {
+        unitUsersList.push(user);
+      }
+    });
+    
+    setDepartmentUsers(deptUsers);
+    setUnitUsers(unitUsersList);
+  }, [allUsers, currentUser.id, eligibleDepartments, eligibleUnits]);
+
+  // Оновлення вибраних департаментів і підрозділів
+  useEffect(() => {
+    const deptMap = new Map<string, number>();
+    const unitMap = new Map<string, number>();
+
+    // Відстеження вибраних кафедр
+    selectedDepartmentReviewerIds.forEach(id => {
+      const reviewer = allUsers.find(user => user.id === id);
+      if (reviewer?.department?.name && eligibleDepartments.has(reviewer.department.name)) {
+        deptMap.set(reviewer.department.name, reviewer.id);
+      }
+    });
+
+    // Відстеження вибраних підрозділів
+    selectedUnitReviewerIds.forEach(id => {
+      const reviewer = allUsers.find(user => user.id === id);
+      if (reviewer?.department?.unit.name && eligibleUnits.has(reviewer.department.unit.name)) {
+        unitMap.set(reviewer.department.unit.name, reviewer.id);
+      }
+    });
+
+    setSelectedDepartmentMap(deptMap);
+    setSelectedUnitMap(unitMap);
+  }, [selectedDepartmentReviewerIds, selectedUnitReviewerIds, allUsers, eligibleDepartments, eligibleUnits]);
+
+  // Додавання/видалення рецензентів для кафедр
+  const toggleDepartmentReviewer = (user: User) => {
+    const isDepartmentSelected = selectedDepartmentReviewerIds.includes(user.id);
+    
+    if (isDepartmentSelected) {
+      // Видалення з рецензентів департаменту
+      setDepartmentReviewerIds(prev => prev.filter(id => id !== user.id));
+    } else {
+      const departmentName = user.department?.name;
+      if (departmentName && !selectedDepartmentMap.has(departmentName)) {
+        // Додавання як рецензента департаменту
+        setDepartmentReviewerIds(prev => [...prev, user.id]);
+      }
+    }
+  };
+
+  // Додавання/видалення рецензентів для підрозділів
+  const toggleUnitReviewer = (user: User) => {
+    const isUnitSelected = selectedUnitReviewerIds.includes(user.id);
+    
+    if (isUnitSelected) {
+      // Видалення з рецензентів підрозділу
+      setUnitReviewerIds(prev => prev.filter(id => id !== user.id));
+    } else {
+      const unitName = user.department?.unit.name;
+      if (unitName && !selectedUnitMap.has(unitName)) {
+        // Додавання як рецензента підрозділу
+        setUnitReviewerIds(prev => [...prev, user.id]);
+      }
+    }
+  };
+
+  // Фільтрація користувачів по пошуку
+  const filterUsersBySearch = (users: User[]) => {
+    return users.filter((user) =>
+      `${user.firstName} ${user.lastName} ${user.lastName} ${user.firstName}`
+        .toLowerCase()
+        .includes(search.toLowerCase())
     );
   };
 
-  const displayedUsers = filteredUsers.filter((user) =>
-    `${user.firstName} ${user.lastName}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+  // Фільтровані списки користувачів
+  const filteredDepartmentUsers = filterUsersBySearch(departmentUsers);
+  const filteredUnitUsers = filterUsersBySearch(unitUsers);
+
+  // Перевірка, чи можна вибрати користувача як рецензента департаменту
+  const canSelectDepartmentUser = (user: User) => {
+    if (selectedDepartmentReviewerIds.includes(user.id)) {
+      return true; // Вже вибраний
+    }
+
+    const departmentName = user.department?.name;
+    if (!departmentName || !eligibleDepartments.has(departmentName)) {
+      return false; // Не належить до доступного департаменту
+    }
+
+    return !selectedDepartmentMap.has(departmentName);
+  };
+
+  // Перевірка, чи можна вибрати користувача як рецензента підрозділу
+  const canSelectUnitUser = (user: User) => {
+    if (selectedUnitReviewerIds.includes(user.id)) {
+      return true; // Вже вибраний
+    }
+
+    // Перевірка, чи користувач вже є рецензентом департаменту
+    if (selectedDepartmentReviewerIds.includes(user.id)) {
+      return false; // Вже обраний як рецензент департаменту
+    }
+
+    const unitName = user.department?.unit.name;
+    if (!unitName || !eligibleUnits.has(unitName)) {
+      return false; // Не належить до доступного підрозділу
+    }
+
+    return !selectedUnitMap.has(unitName);
+  };
+
+  // Відображення списку користувачів для кафедр
+  const renderDepartmentUserList = () => {
+    if (filteredDepartmentUsers.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-4 space-y-2">
+          <MagnifyingGlassIcon className="w-10 h-10 text-gray-300" />
+          <p className="text-sm text-gray-500">Нічого не знайдено</p>
+        </div>
+      );
+    }
+
+    return filteredDepartmentUsers.map((user) => {
+      const fullName = `${user.lastName} ${user.firstName}`;
+      const isSelected = selectedDepartmentReviewerIds.includes(user.id);
+      const isSelectable = canSelectDepartmentUser(user);
+      const isDisabled = !isSelectable && !isSelected;
+      const departmentName = user.department?.name;
+      
+      return (
+        <button
+          key={`dept-${user.id}`}
+          type="button"
+          onClick={() => !isDisabled && toggleDepartmentReviewer(user)}
+          disabled={isDisabled}
+          className={`w-full text-left px-4 py-2 rounded-lg flex items-center justify-between transition-all
+            ${isSelected
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : isDisabled
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                : "bg-white hover:bg-gray-100 text-gray-800 border border-transparent hover:border-gray-200"
+            } focus:outline-none focus:ring-2 focus:ring-blue-300
+          `}
+        >
+          <div className="flex items-center space-x-3">
+            <UserIcon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <div>
+              <div className="font-semibold">{fullName}</div>
+              <div className="flex flex-col text-sm">
+                <span className={`${isSelected ? 'text-blue-200' : 'text-gray-500'} flex items-center`}>
+                  Кафедра: {departmentName}
+                  {!isSelected && departmentName && selectedDepartmentMap.has(departmentName) && (
+                    <span className="ml-1 text-yellow-500 text-xs">(вже обрано рецензента)</span>
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+          {isSelected && (
+            <CheckIcon className="w-6 h-6 text-white" />
+          )}
+        </button>
+      );
+    });
+  };
+
+  // Відображення списку користувачів для підрозділів
+  const renderUnitUserList = () => {
+    if (filteredUnitUsers.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-4 space-y-2">
+          <MagnifyingGlassIcon className="w-10 h-10 text-gray-300" />
+          <p className="text-sm text-gray-500">Нічого не знайдено</p>
+        </div>
+      );
+    }
+
+    return filteredUnitUsers.map((user) => {
+      const fullName = `${user.lastName} ${user.firstName}`;
+      const isSelected = selectedUnitReviewerIds.includes(user.id);
+      const isSelectable = canSelectUnitUser(user);
+      const isDisabled = !isSelectable && !isSelected;
+      const unitName = user.department?.unit.name;
+      
+      return (
+        <button
+          key={`unit-${user.id}`}
+          type="button"
+          onClick={() => !isDisabled && toggleUnitReviewer(user)}
+          disabled={isDisabled}
+          className={`w-full text-left px-4 py-2 rounded-lg flex items-center justify-between transition-all
+            ${isSelected
+              ? "bg-green-500 text-white hover:bg-green-600"
+              : isDisabled
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                : "bg-white hover:bg-gray-100 text-gray-800 border border-transparent hover:border-gray-200"
+            } focus:outline-none focus:ring-2 focus:ring-green-300
+          `}
+        >
+          <div className="flex items-center space-x-3">
+            <UserIcon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <div>
+              <div className="font-semibold">{fullName}</div>
+              <div className="flex flex-col text-sm">
+                <span className={`${isSelected ? 'text-green-200' : 'text-gray-500'} flex items-center`}>
+                  Підрозділ: {unitName}
+                  {!isSelected && unitName && selectedUnitMap.has(unitName) && (
+                    <span className="ml-1 text-yellow-500 text-xs">(вже обрано рецензента)</span>
+                  )}
+                </span>
+                {!isSelected && selectedDepartmentReviewerIds.includes(user.id) && (
+                  <span className="text-red-500 text-xs">Вже обрано як рецензента кафедри</span>
+                )}
+              </div>
+            </div>
+          </div>
+          {isSelected && (
+            <CheckIcon className="w-6 h-6 text-white" />
+          )}
+        </button>
+      );
+    });
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <Input
           label="Пошук рецензентів"
           type="text"
@@ -49,50 +340,108 @@ export default function ReviewerSelector({
           placeholder="Введіть ім'я або прізвище..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm"
         />
       </div>
-      <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-inner">
-        {displayedUsers.length > 0 ? (
-          displayedUsers.map((user) => {
-            const fullName = `${user.lastName} ${user.firstName}`;
-            const isSelected = selectedReviewerIds.includes(user.id);
-            return (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => toggleReviewer(user.id)}
-                className={`w-full text-left px-4 py-2 rounded-lg flex items-center justify-between transition-all group
-                  ${isSelected 
-                    ? "bg-blue-500 text-white hover:bg-blue-600" 
-                    : "bg-white hover:bg-gray-100 text-gray-800 border border-transparent hover:border-gray-200"
-                  } focus:outline-none focus:ring-2 focus:ring-blue-300
-                `}
-              >
-                <div className="flex items-center space-x-3">
-                  <UserIcon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                  <div>
-                    <div className="font-semibold">{fullName}</div>
-                    {user.department?.name && (
-                      <div className={`text-sm ${isSelected ? 'text-blue-200' : 'text-gray-500'}`}>
-                        {user.department.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {isSelected && (
-                  <CheckIcon className="w-6 h-6 text-white" />
-                )}
-              </button>
-            );
-          })
-        ) : (
-          <div className="flex flex-col items-center justify-center py-4 space-y-2">
-            <MagnifyingGlassIcon className="w-10 h-10 text-gray-300" />
-            <p className="text-sm text-gray-500">Нічого не знайдено</p>
+      
+      {eligibleDepartments.size > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600" />
+              <h3 className="text-lg font-medium">Рецензенти від кафедр</h3>
+            </div>
+            <div className="text-sm text-gray-500">
+              Обрано: {selectedDepartmentReviewerIds.length} / {eligibleDepartments.size}
+            </div>
           </div>
-        )}
-      </div>
+          
+          <div className="flex flex-wrap gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+            <div className="font-medium">Доступні кафедри:</div>
+            <div className="flex flex-wrap gap-1">
+              {Array.from(eligibleDepartments).map(dept => (
+                <span key={dept} className="px-2 py-0.5 bg-blue-100 rounded-full text-blue-700 flex items-center">
+                  <BuildingOfficeIcon className="w-3 h-3 mr-1" />
+                  {dept}
+                  {selectedDepartmentMap.has(dept) && <CheckIcon className="w-3 h-3 ml-1 text-green-600" />}
+                </span>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-inner">
+            {renderDepartmentUserList()}
+          </div>
+        </div>
+      )}
+      
+      {eligibleUnits.size > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <BuildingOfficeIcon className="w-5 h-5 mr-2 text-green-600" />
+              <h3 className="text-lg font-medium">Рецензенти від підрозділів</h3>
+            </div>
+            <div className="text-sm text-gray-500">
+              Обрано: {selectedUnitReviewerIds.length} / {eligibleUnits.size}
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 text-sm text-gray-600 bg-green-50 p-3 rounded-lg border border-green-100">
+            <div className="font-medium">Доступні підрозділи:</div>
+            <div className="flex flex-wrap gap-1">
+              {Array.from(eligibleUnits).map(unit => (
+                <span key={unit} className="px-2 py-0.5 bg-green-100 rounded-full text-green-700 flex items-center">
+                  <BuildingOfficeIcon className="w-3 h-3 mr-1" />
+                  {unit}
+                  {selectedUnitMap.has(unit) && <CheckIcon className="w-3 h-3 ml-1 text-green-600" />}
+                </span>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-inner">
+            {renderUnitUserList()}
+          </div>
+        </div>
+      )}
+      
+      {eligibleDepartments.size === 0 && eligibleUnits.size === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 space-y-3 text-gray-500">
+          <BuildingOfficeIcon className="w-16 h-16 text-gray-300" />
+          <p>Для вибору рецензентів спочатку оберіть респондентів</p>
+        </div>
+      )}
+      
+      {(selectedDepartmentReviewerIds.length > 0 || selectedUnitReviewerIds.length > 0) && (
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h4 className="font-medium mb-2">Обрані рецензенти:</h4>
+          <div className="space-y-1">
+            {selectedDepartmentReviewerIds.map(id => {
+              const user = allUsers.find(u => u.id === id);
+              if (!user) return null;
+              return (
+                <div key={`summary-dept-${id}`} className="flex items-center text-sm">
+                  <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                  <span className="font-medium">{user.lastName} {user.firstName}</span>
+                  <span className="text-gray-500 ml-2">- {user.department?.name} (кафедра)</span>
+                </div>
+              );
+            })}
+            {selectedUnitReviewerIds.map(id => {
+              const user = allUsers.find(u => u.id === id);
+              if (!user) return null;
+              return (
+                <div key={`summary-unit-${id}`} className="flex items-center text-sm">
+                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                  <span className="font-medium">{user.lastName} {user.firstName}</span>
+                  <span className="text-gray-500 ml-2">- {user.department?.unit.name} (підрозділ)</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
