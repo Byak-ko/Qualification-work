@@ -10,6 +10,23 @@ export enum UserRole {
   TEACHER = 'teacher',
 }
 
+export enum Degree {
+  PhD = 'Доктор філософії',
+  DOCTOR_SCIENCES = 'Доктор наук',
+  NONE = 'Відсутній',
+}
+
+export enum Position {
+  LECTURER = 'Викладач',
+  SENIOR_LECTURER = 'Старший викладач',
+  ASSOCIATE_PROFESSOR = 'Доцент',
+  PROFESSOR = 'Професор',
+  HEAD_OF_DEPARTMENT = 'Завідувач кафедри',
+  DEAN_OR_DIRECTOR = 'Декан факультету / директор ННІ',
+  VICE_RECTOR = 'Проректор',
+  RECTOR = 'Ректор',
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -30,11 +47,11 @@ export class User {
   @Column()
   password: string;
 
-  @Column()
-  degree: string;
+  @Column({ default: Degree.NONE, type: 'enum', enum: Degree })
+  degree?: Degree;
 
-  @Column()
-  position: string;
+  @Column({ default: Position.LECTURER, type: 'enum', enum: Position })
+  position: Position;
 
   @ManyToOne(() => Department, (department) => department.users)
   department: Department;

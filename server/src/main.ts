@@ -20,6 +20,7 @@ async function bootstrap() {
     .setTitle('Teacher rating system API')
     .setDescription('A system of teacher rating with multi-level verification of higher education institutions')
     .setVersion('1.0')
+    .addBearerAuth() 
     .addTag('users', 'Операції з користувачами') 
     .addTag('ratings', 'Операції з рейтингами')
     .addTag('auth', 'Авторизація та аутентифікація')

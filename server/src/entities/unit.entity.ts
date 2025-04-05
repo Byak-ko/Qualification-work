@@ -1,6 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Department } from './department.entity';
 
+export enum UnitType {
+  FACULTY = 'Факультет',
+  INSTITUTE = 'Інститут',
+}
+
 @Entity()
 export class Unit {
   @PrimaryGeneratedColumn()
@@ -10,7 +15,7 @@ export class Unit {
   name: string;
 
   @Column()
-  type: string;
+  type: UnitType;
 
   @OneToMany(() => Department, (department) => department.unit, { onDelete: 'SET NULL' })
   departments: Department[];

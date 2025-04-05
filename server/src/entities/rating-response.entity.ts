@@ -9,22 +9,25 @@ import { RatingParticipant } from './rating-participant.entity';
 export class RatingResponse {
     @PrimaryGeneratedColumn()
     id: number;
-    
+   
     @Column({ type: 'float', default: 0 })
     score: number;
-
+    
     @ManyToOne(() => RatingItem, { onDelete: 'CASCADE' })
     item: RatingItem;
-
+    
     @ManyToOne(() => User)
     respondent: User;
-
-    @ManyToOne(() => Rating)
+    
+    @ManyToOne(() => Rating, { onDelete: 'CASCADE' })
     rating: Rating;
-
-    @ManyToOne(() => RatingParticipant, (p) => p.responses)
+    
+    @ManyToOne(() => RatingParticipant, (p) => p.responses, { onDelete: 'CASCADE' })
     participant: RatingParticipant;
-
-    @OneToMany(() => Document, (doc) => doc.response)
+    
+    @OneToMany(() => Document, (doc) => doc.response, { 
+      cascade: true, 
+      onDelete: 'CASCADE' 
+    })
     documents: Document[];
 }

@@ -5,6 +5,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Role } from '../auth/roles.decorator';
 import { UserRole } from '../entities/user.entity'
+import { UnitType } from 'src/entities/unit.entity';
+
 
 @ApiTags('units')
 @Controller('units')
@@ -39,7 +41,7 @@ export class UnitsController {
   @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
   @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async createUnit(@Body() body: { name: string; type: string }) {
+  async createUnit(@Body() body: { name: string; type: UnitType }) {
     console.log("Unit body", body);
     return this.unitsService.create(body);
   }
@@ -63,7 +65,7 @@ export class UnitsController {
   @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
   @ApiResponse({ status: 404, description: 'Підрозділ не знайдено' })
   @ApiResponse({ status: 500, description: 'Помилка сервера' })
-  async updateUnit(@Param('id') id: number, @Body() body: { name: string; type: string }) {
+  async updateUnit(@Param('id') id: number, @Body() body: { name: string; type: UnitType }) {
     return this.unitsService.update(id, body);
   }
 

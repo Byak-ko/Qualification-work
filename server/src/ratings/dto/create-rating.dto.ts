@@ -1,4 +1,13 @@
-import { IsArray, IsNotEmpty, IsString, ValidateNested, ArrayMinSize, IsNumber, IsOptional } from 'class-validator';
+import { 
+  IsArray, 
+  IsNotEmpty, 
+  IsString, 
+  ValidateNested, 
+  ArrayMinSize, 
+  IsNumber, 
+  IsOptional,
+  IsBoolean
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateRatingDto {
@@ -12,11 +21,19 @@ export class CreateRatingDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  respondentIds: number[]
+  respondentIds: number[];
 
   @IsArray()
-  @ArrayMinSize(1)
-  reviewerIds: number[];
+  @IsOptional()
+  reviewerDepartmentsIds?: number[];
+
+  @IsArray()
+  @IsOptional()
+  reviewerUnitsIds?: number[];
+  
+  @IsArray()
+  @IsOptional()
+  reviewerIds?: number[];
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -37,4 +54,8 @@ export class RatingItemDto {
 
   @IsString()
   comment: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDocNeed: boolean;
 }

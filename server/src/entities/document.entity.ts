@@ -10,6 +10,9 @@ export class Document {
   @Column()
   url: string;
 
+  @Column({ nullable: true })
+  title: string;
+
   @ManyToOne(() => RatingResponse, (response) => response.documents)
   response: RatingResponse;
 }

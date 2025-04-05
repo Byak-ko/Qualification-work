@@ -1,29 +1,30 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, IsNumber, MinLength } from 'class-validator'
-import { UserRole } from 'src/entities/user.entity'
+import { UserRole, Degree, Position } from 'src/entities/user.entity'
+import { Transform } from 'class-transformer';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Імʼя не може бути пустим' })
   @IsString()
-  firstName: string
+  firstName: string;
 
   @IsNotEmpty({ message: 'Прізвище не може бути пустим' })
   @IsString()
-  lastName: string
+  lastName: string;
 
   @IsEmail({}, { message: 'Некоректний email' })
-  email: string
+  email: string;
 
   @IsEnum(UserRole)
-  role: UserRole
+  role: UserRole;
 
-  @IsNotEmpty({ message: 'Ступінь не може бути пустим' })
-  @IsString()
-  degree: string
+  @Transform(({ value }) => (value in Degree ? Degree[value] : value))
+  @IsEnum(Degree, { message: 'Некоректний науковий ступінь' })
+  degree: Degree;
 
-  @IsNotEmpty({ message: 'Посада не може бути пустим' })
-  @IsString()
-  position: string
+  @Transform(({ value }) => (value in Position ? Position[value] : value))
+  @IsEnum(Position, { message: 'Некоректна посада' })
+  position: Position;
 
   @IsNumber()
-  departmentId: number
+  departmentId: number;
 }

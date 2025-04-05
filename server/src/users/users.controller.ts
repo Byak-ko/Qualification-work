@@ -108,7 +108,7 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Email вже використовується' })
   async update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
     const currentUser = await this.userService.findById(id);
-    
+    console.log(updateUserDto);
     if (updateUserDto.email && updateUserDto.email !== currentUser.email) {
       const existingUser = await this.userService.findByEmail(updateUserDto.email);
       
@@ -121,6 +121,37 @@ export class UsersController {
   }
 
   @Patch(':id/password')
+  @ApiOperation({
+    summary: 'Змінити пароль користувача',
+    description: 'Оновлює пароль користувача за наданим ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID користувача для зміни пароля',
+    required: true,
+    type: Number,
+  })
+  @ApiBody({
+    description: 'Дані для зміни пароля',
+    schema: {
+      type: 'object',
+      required: ['password', 'confirmPassword'],
+      properties: {
+        password: {
+          type: 'string',
+          description: 'Новий пароль користувача',
+        },
+        confirmPassword: {
+          type: 'string',
+          description: 'Підтвердження нового пароля',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Пароль успішно змінено' })
+  @ApiResponse({ status: 400, description: 'Невірні дані' })
+  @ApiResponse({ status: 401, description: 'Неавторизований доступ або паролі не співпадають' })
+  @ApiResponse({ status: 404, description: 'Користувач не знайдений' })
   async changePassword(
     @Param('id') id: string,
     @Body() body: { password: string; confirmPassword: string },
@@ -134,6 +165,35 @@ export class UsersController {
   }
 
   @Patch(':id/email')
+  @ApiOperation({
+    summary: 'Змінити email користувача',
+    description: 'Оновлює email користувача за наданим ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID користувача для зміни email',
+    required: true,
+    type: Number,
+  })
+  @ApiBody({
+    description: 'Дані для зміни email',
+    schema: {
+      type: 'object',
+      required: ['email'],
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          description: 'Новий email користувача',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Email успішно змінено' })
+  @ApiResponse({ status: 400, description: 'Невірні дані' })
+  @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
+  @ApiResponse({ status: 404, description: 'Користувач не знайдений' })
+  @ApiResponse({ status: 409, description: 'Email вже використовується' })
   async changeEmail(
     @Param('id') id: string,
     @Body() body: { email: string;},

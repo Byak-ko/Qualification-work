@@ -1,12 +1,17 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { User } from './user.entity';
-import { Rating } from './rating.entity';
 import { RatingParticipant } from './rating-participant.entity';
 
 export enum RatingApprovalStatus {
     PENDING = 'pending',
     APPROVED = 'approved',
     REVISION = 'revision',
+  }
+
+  export enum ReviewLevel {
+    DEPARTMENT = 'department',
+    UNIT = 'unit',
+    AUTHOR = 'author',
   }
 @Entity()
 export class RatingApproval {
@@ -24,4 +29,7 @@ export class RatingApproval {
 
   @Column('jsonb')
   comments: Record<number, string>;
+
+  @Column({ type: 'enum', enum: ReviewLevel })
+  reviewLevel: ReviewLevel;
 }

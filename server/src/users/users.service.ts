@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
+import { User, Degree, Position } from '../entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { Department } from '../entities/department.entity';
 import { CreateUserDto } from './dto/create-user.dto'
@@ -21,7 +21,7 @@ export class UserService {
   ) { }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({ relations: ['department'] });
+    return this.userRepository.find({ relations: ['department', 'department.unit'] });
   }
 
   async findById(id: number): Promise<User> {
@@ -37,7 +37,7 @@ export class UserService {
   }
 
   async create(dto: CreateUserDto) {
-    const { departmentId, email, ...rest } = dto;
+    const { departmentId, email, degree, position, ...rest } = dto;
   
     const department = await this.departmentRepository.findOne({
       where: { id: departmentId },
@@ -52,7 +52,10 @@ export class UserService {
       email,
       password: hashedPassword,
       department,
+      degree: degree ?? Degree.NONE, 
+      position: position ?? Position.LECTURER, 
     });
+  
     await this.userRepository.save(user);
   
     await this.mailService.sendMail({
@@ -63,27 +66,34 @@ export class UserService {
   
     return user;
   }
-
+  
   async update(id: number, dto: UpdateUserDto) {
-    const user = await this.userRepository.findOne({ where: { id } })
-    if (!user) throw new NotFoundException('Користувача не знайдено')
-
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException("Користувача не знайдено");
+  
     if (dto.departmentId) {
       const department = await this.departmentRepository.findOne({
         where: { id: dto.departmentId },
-      })
-      if (!department) throw new NotFoundException('Кафедру не знайдено')
-      user.department = department
+      });
+      if (!department) throw new NotFoundException("Кафедру не знайдено");
+      user.department = department;
     }
-
+  
     if (dto.password) {
-      user.password = await bcrypt.hash(dto.password, 10)
+      user.password = await bcrypt.hash(dto.password, 10);
     }
-
-    const { departmentId, password, ...rest } = dto
-    Object.assign(user, rest)
-    return this.userRepository.save(user)
+  
+    const { departmentId, password, ...rest } = dto;
+    Object.assign(user, {
+      ...rest,
+      degree: dto.degree ?? user.degree,
+      position: dto.position ?? user.position,
+    });
+  
+    return this.userRepository.save(user);
   }
+  
+  
 
   async updatePassword(id: number, newPassword: string) {
     const user = await this.userRepository.findOne({ where: { id } });

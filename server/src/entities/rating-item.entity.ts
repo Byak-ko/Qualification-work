@@ -17,4 +17,7 @@ export class RatingItem {
 
   @Column({ type: 'text', nullable: true })
   comment: string;
+
+  @Column({ default: false })
+  isDocNeed: boolean;
 }
