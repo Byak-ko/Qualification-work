@@ -119,7 +119,7 @@ const LoginPage = () => {
             full
             disabled={loading || !email || !password}
           >
-            {loading ? <Spinner /> : "Увійти"}
+            {loading ? <Spinner size="small"/> : "Увійти"}
           </Button>
         </form>
       </motion.div>

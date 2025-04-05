@@ -1,3 +1,4 @@
+import { RatingParticipantStatus } from "./RatingTypes";
 import { User } from "./User";
 
 export type Rating = {
@@ -6,9 +7,16 @@ export type Rating = {
     status: string;
     id: number;
     author: number;
-    participants: { respondent: User }[];
+    participants: { 
+        respondent: User;
+        departmentReviewer?: User;
+        unitReviewer?: User;
+    }[];
     reviewers: User[];
+    departmentReviewers?: User[];
+    unitReviewers?: User[];
     items: RatingItem[];
+    participantStatus: RatingParticipantStatus;
 };
 
 export type RatingItem = {
@@ -17,11 +25,12 @@ export type RatingItem = {
     maxScore: number;
     comment: string;
     score: number;
-    documents: File[]
+    documents: File[];
+    isDocNeed: boolean;
 };
 
 export type RatingApproval = {
     ratingId: number;
-    comments: Record<number, string>;
-    status: "pending" | "approved" | "revision" ;
-}
+    comments: Record<string, unknown>;
+    status: "pending" | "approved" | "revision";
+};

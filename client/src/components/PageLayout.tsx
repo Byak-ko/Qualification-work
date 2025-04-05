@@ -6,28 +6,62 @@ import { Role } from "../types/User"
 import NProgress from "nprogress"
 import "nprogress/nprogress.css"
 import Breadcrumbs from "./Breadcrumbs"
+import { 
+  HomeIcon, 
+  UsersIcon, 
+  ChartBarIcon, 
+  UserIcon, 
+  DocumentTextIcon, 
+  Bars3Icon, 
+  XMarkIcon,
+  ArrowRightOnRectangleIcon,
+  BuildingOfficeIcon,
+  RocketLaunchIcon
+} from '@heroicons/react/24/outline'
 
 const PageLayout = () => {
   const { currentUser, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const location = useLocation()
   
-
   useEffect(() => {
     NProgress.start()
+    NProgress.configure({ easing: 'ease', speed: 500 })
     setTimeout(() => NProgress.done(), 500)
+    
+    const npProgressStyle = document.createElement('style')
+    npProgressStyle.textContent = `
+      #nprogress .bar {
+        background: linear-gradient(to right, #8b5cf6, #ec4899) !important;
+        height: 4px !important;
+      }
+      #nprogress .peg {
+        box-shadow: 0 0 10px #8b5cf6, 0 0 5px #ec4899 !important;
+      }
+      #nprogress .spinner {
+        display: none !important;
+      }
+    `
+    document.head.appendChild(npProgressStyle)
+    return () => {
+      document.head.removeChild(npProgressStyle)
+    }
   }, [location.pathname])
 
-  const baseMenu = [{ label: "🏠 Головна", path: "/" }]
+  const baseMenu = 
+  [
+    { label: "Головна", path: "/", icon: HomeIcon },
+    { label: "Рейтинги", path: "/ratings", icon: ChartBarIcon },
+    { label: "Мій кабінет", path: "/profile", icon: UserIcon },
+  ]
 
   const roleMenu = currentUser?.role.includes(Role.ADMIN)
     ? [
-        { label: "👥 Користувачі", path: "/users" },
-        { label: "📊 Рейтинги", path: "/ratings" },
+        { label: "Користувачі", path: "/users", icon: UsersIcon },
+        { label: "Підрозділи", path: "/units", icon: BuildingOfficeIcon },
       ]
     : [
-        { label: "👤 Кабінет", path: "/me" },
-        { label: "📝 Мої звіти", path: "/reports" },
+        { label: "Мої звіти", path: "/reports", icon: DocumentTextIcon },
       ]
 
   const menuItems = [...baseMenu, ...roleMenu]
@@ -41,19 +75,41 @@ const PageLayout = () => {
     exit: { x: "100%", transition: { duration: 0.3 } },
   }
 
+  const contentVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
+  }
+
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 bg-white relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 relative overflow-x-hidden">
+      <div className="fixed -top-32 -left-32 w-64 h-64 bg-yellow-200 rounded-full filter blur-3xl opacity-40 z-0 animate-pulse"></div>
+      <div className="fixed top-1/4 -right-32 w-72 h-72 bg-pink-200 rounded-full filter blur-3xl opacity-30 z-0"></div>
+      <div className="fixed bottom-1/3 -left-32 w-80 h-80 bg-cyan-200 rounded-full filter blur-3xl opacity-30 z-0"></div>
+      <div className="fixed bottom-1/4 right-1/4 w-48 h-48 bg-indigo-200 rounded-full filter blur-3xl opacity-20 z-0"></div>
+      <div className="fixed top-1/3 left-1/3 w-36 h-36 bg-violet-200 rounded-full filter blur-3xl opacity-25 z-0"></div>
+      
       <button
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 right-4 z-20 p-3 bg-indigo-600 dark:bg-indigo-500 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-400 focus:outline-none shadow-lg transition-all"
+        onClick={toggleMenu}
+        className="fixed top-4 right-4 z-20 p-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full hover:from-violet-600 hover:to-fuchsia-600 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 shadow-lg transition-all duration-300 group"
+        aria-label={isMenuOpen ? "Закрити меню" : "Відкрити меню"}
       >
-        ☰
+        {isMenuOpen ? (
+          <XMarkIcon className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+        ) : (
+          <Bars3Icon className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" />
+        )}
       </button>
 
       {isMenuOpen && (
         <div
           onClick={() => setIsMenuOpen(false)}
-          className="fixed inset-0 z-5 bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 z-5 bg-white/30 backdrop-blur-sm transition-opacity duration-300"
         />
       )}
 
@@ -65,52 +121,69 @@ const PageLayout = () => {
             animate="visible"
             exit="exit"
             variants={sidebarVariants}
-            className="fixed top-0 right-0 h-full w-64 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-l border-indigo-200 dark:border-gray-700 shadow-2xl rounded-l-3xl"
+            className="fixed top-0 right-0 h-full w-72 z-10 bg-white/80 backdrop-blur-xl border-l border-purple-200 shadow-2xl rounded-l-3xl overflow-y-auto"
           >
-            <div className="p-6 space-y-4">
-              <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-4">
-                📘 Навігація
+            <div className="p-6 space-y-6">
+              <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-8 flex items-center gap-2">
+                <RocketLaunchIcon className="w-8 h-8 text-purple-500" />
+                <span>Навігація</span>
               </div>
 
-              {menuItems.map(({ label, path }) => (
-                <NavLink
-                  key={path}
-                  to={path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block px-4 py-3 rounded-xl text-lg font-medium transition-all border border-transparent hover:scale-105 hover:shadow-md ${
-                      isActive
-                        ? "bg-indigo-200 dark:bg-indigo-700 text-indigo-900 dark:text-white shadow-sm"
-                        : "hover:bg-indigo-50 dark:hover:bg-indigo-600 text-indigo-700 dark:text-indigo-300"
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
+              <div className="space-y-3">
+                {menuItems.map(({ label, path, icon: Icon }) => (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl text-lg font-medium transition-all border border-transparent hover:scale-105 hover:shadow-md ${
+                        isActive
+                          ? "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 shadow-sm border-l-4 border-l-purple-400"
+                          : "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-indigo-600"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-pink-500' : 'text-blue-500'}`} />
+                        <span>{label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
 
-              <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
-
-              <div className="h-px bg-indigo-100 dark:bg-gray-600 my-2" />
+              <div className="h-px bg-gradient-to-r from-purple-200 to-pink-200 my-6" />
 
               <button
                 onClick={() => {
                   setIsMenuOpen(false)
                   logout()
                 }}
-                className="block w-full text-left px-4 py-3 rounded-xl text-lg font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900 transition-all"
+                className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-xl text-lg font-medium text-red-500 hover:text-white hover:bg-gradient-to-r hover:from-red-400 hover:to-pink-400 transition-all hover:shadow-md"
               >
-                🚪 Вийти
+                <ArrowRightOnRectangleIcon className="w-6 h-6 flex-shrink-0" />
+                <span>Вийти</span>
               </button>
             </div>
           </motion.aside>
         )}
       </AnimatePresence>
       
-      <main className="p-6 flex-grow bg-white bg-white text-gray-900 dark:text-gray-200 rounded-lg shadow-md m-4">
+      <motion.main 
+        initial="hidden"
+        animate="visible"
+        variants={contentVariants}
+        className="flex-grow bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl m-4 md:m-6 p-6 transition-all duration-300 border border-purple-100 relative z-1"
+      >
         <Breadcrumbs />
-        <Outlet />
-      </main>
+        <div className="mt-6">
+          <Outlet />
+        </div>
+      </motion.main>
+
+      <div className="fixed bottom-4 left-4 w-24 h-24 bg-gradient-to-r from-yellow-300 to-amber-300 rounded-full filter blur-2xl opacity-20 z-0 animate-pulse"></div>
+      <div className="fixed top-1/2 right-8 w-16 h-16 bg-gradient-to-r from-green-300 to-teal-300 rounded-full filter blur-xl opacity-20 z-0 animate-ping"></div>
     </div>
   )
 }

@@ -28,7 +28,7 @@ const HomePage = () => {
         <div className="bg-white shadow-sm rounded-xl p-8 mb-10">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-500">
-              Ласкаво просимо, {currentUser?.email}
+              Ласкаво просимо, {currentUser?.firstName}
             </h1>
             <p className="text-lg text-gray-600">
               Роль:{" "}
