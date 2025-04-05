@@ -8,6 +8,7 @@ import RatingItemBlock from './RatingItemBlock';
 import RatingPreviewModal from './RatingPreviewModal';
 import { DocumentMagnifyingGlassIcon, DocumentCheckIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { Rating } from '../../types/Rating';
+import { RatingParticipantStatus, ReviewLevel } from '../../types/RatingTypes';
 
 export default function RespondentRatingPage() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function RespondentRatingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [reviewerComments, setReviewerComments] = useState<Record<number, string> | null>(null);
 
   useEffect(() => {
     api
@@ -27,12 +29,55 @@ export default function RespondentRatingPage() {
           ...item,
           score: 0,
           documents: [],
+          isDocNeed: item.isDocNeed || false, 
         }));
         setRating({ ...data, items: itemsWithDefaults });
+        
+        // If participant is in REVISION status, get the approvals and comments
+        if (data.participantStatus === RatingParticipantStatus.REVISION) {
+          fetchReviewerComments(data.participantId);
+        }
       })
       .catch(() => toast.error('Не вдалося завантажити рейтинг'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Function to fetch reviewer comments
+  const fetchReviewerComments = async (participantId: number) => {
+    try {
+      const res = await api.get(`/ratings/participants/${participantId}/approvals`);
+      const approvals = res.data;
+      
+      // Get comments per review level hierarchy
+      const authorComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.AUTHOR)?.comments || {};
+      const unitComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.UNIT)?.comments || {};
+      const departmentComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.DEPARTMENT)?.comments || {};
+      
+      // Merge comments with priority: author > unit > department
+      const mergedComments: Record<number, string> = {};
+      
+      // Loop through all potential item IDs
+      if (rating) {
+        rating.items.forEach(item => {
+          const itemId = item.id;
+          
+          // Apply hierarchy: author comments take precedence, then unit, then department
+          if (authorComments[itemId]) {
+            mergedComments[itemId] = authorComments[itemId];
+          } else if (unitComments[itemId]) {
+            mergedComments[itemId] = unitComments[itemId];
+          } else if (departmentComments[itemId]) {
+            mergedComments[itemId] = departmentComments[itemId];
+          }
+        });
+      }
+      
+      setReviewerComments(mergedComments);
+    } catch (error) {
+      console.error('Failed to fetch reviewer comments:', error);
+      // Don't show error to user, just continue without comments
+    }
+  };
 
   const handleScoreChange = (index: number, score: number) => {
     setRating((prev) => {
@@ -75,9 +120,15 @@ export default function RespondentRatingPage() {
     if (!rating) return;
 
     const isValidScores = rating.items.every(
-      (item) => item.score >= 0 && item.score <= item.maxScore
+      (item) => {
+        const score = item.score;
+        return score >= 0 && (item.maxScore === 0 || score <= item.maxScore);
+      }
     );
-    const isValidFiles = rating.items.every((item) => item.documents.length > 0 || item.score === 0);
+
+    const isValidFiles = rating.items.every(
+      (item) => !item.isDocNeed || item.score === 0 || item.documents.length > 0
+    );
 
     if (!isValidScores) {
       toast.error('Перевірте правильність введених балів');
@@ -85,7 +136,7 @@ export default function RespondentRatingPage() {
     }
 
     if (!isValidFiles) {
-      toast.error('Перевірте, чи всі документи завантажені');
+      toast.error('Деякі критерії вимагають підтверджуючих документів');
       return;
     }
 
@@ -99,7 +150,6 @@ export default function RespondentRatingPage() {
     return res.data.url;
   };
   
-
   const handleSubmit = async () => {
     if (!rating) return;
     setSubmitting(true);
@@ -115,7 +165,6 @@ export default function RespondentRatingPage() {
         }
         uploadedDocs[item.id] = urls;
       }
-      console.log("UPLOADED docs",uploadedDocs);
   
       await api.post(`/ratings/${id}/respondent-fill`, {
         items: rating.items.map((item) => ({
@@ -124,11 +173,6 @@ export default function RespondentRatingPage() {
           documents: uploadedDocs[item.id] || [],
         })),
       });
-      console.log("SUBMITTED",  rating.items.map((item) => ({
-        id: item.id,
-        score: item.score,
-        documents: uploadedDocs[item.id] || [],
-      })),);
   
       toast.success('Рейтинг успішно заповнено');
       navigate('/ratings');
@@ -139,26 +183,48 @@ export default function RespondentRatingPage() {
     }
   };
 
-  if (loading || !rating) return <Spinner />;
+  const getCompletedItemsCount = () => {
+    if (!rating) return 0;
+    
+    return rating.items.filter(item => {
+      // Критерій вважається заповненим, якщо:
+      // 1. Він має бал = 0 (не нараховано балів)
+      // 2. Або документи не обов'язкові і вказано бал
+      // 3. Або документи обов'язкові, вказано бал і завантажено документи
+      return (
+        item.score === 0 || 
+        (!item.isDocNeed && item.score > 0) || 
+        (item.isDocNeed && item.score > 0 && item.documents.length > 0)
+      );
+    }).length;
+  };
+
+  if (loading || !rating) return <Spinner size='medium'/>;
+
+  const completedItemsCount = getCompletedItemsCount();
+  const totalItemsCount = rating.items.length;
+  const completionPercentage = Math.round((completedItemsCount / totalItemsCount) * 100);
+  
+  // Determine if we're in revision mode
+  const isRevisionMode = rating.participantStatus === RatingParticipantStatus.REVISION;
 
   return (
     <div className="bg-gradient-to-b from-indigo-50 to-white min-h-screen py-6 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header Card */}
+
         <div className="bg-white shadow-lg rounded-2xl mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold text-white flex items-center">
                 <DocumentCheckIcon className="w-8 h-8 mr-3" />
-                Заповнення рейтингу
+                {isRevisionMode ? 'Коригування рейтингу' : 'Заповнення рейтингу'}
               </h1>
               
-              {/* Improved completion counter */}
               <div className="bg-white/20 rounded-xl px-4 py-2 text-white backdrop-blur-sm flex items-center">
                 <div className="mr-3">
                   <div className="text-xs text-white/80 mb-1">Заповнено</div>
                   <div className="text-lg font-bold">
-                    {rating.items.filter(item => item.documents.length > 0).length} / {rating.items.length}
+                    {completedItemsCount} / {totalItemsCount}
                   </div>
                 </div>
                 <svg className="w-10 h-10" viewBox="0 0 36 36">
@@ -170,7 +236,7 @@ export default function RespondentRatingPage() {
                     fill="none" 
                     stroke="white" 
                     strokeWidth="2"
-                    strokeDasharray={`${Math.round((rating.items.filter(item => item.documents.length > 0).length / rating.items.length) * 100)} 100`}
+                    strokeDasharray={`${completionPercentage} 100`}
                     strokeLinecap="round"
                     transform="rotate(-90 18 18)"
                   ></circle>
@@ -178,10 +244,15 @@ export default function RespondentRatingPage() {
               </div>
             </div>
             <p className="text-white/80 mt-2 text-lg font-medium">{rating.name}</p>
+            
+            {isRevisionMode && (
+              <div className="mt-3 bg-white/10 px-4 py-3 rounded-lg backdrop-blur-sm">
+                <p className="text-white font-medium">Рейтинг потребує коригування. Перегляньте коментарі перевіряючого.</p>
+              </div>
+            )}
           </div>
         </div>
   
-        {/* Main Content - Simple Grid Layout */}
         <div className="bg-white shadow-lg rounded-2xl p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {rating.items.map((item, index) => (
@@ -192,12 +263,12 @@ export default function RespondentRatingPage() {
                 onScoreChange={handleScoreChange}
                 onFileChange={handleFileChange}
                 onFileRemove={handleFileRemove}
+                reviewerComments={reviewerComments || undefined}
               />
             ))}
           </div>
         </div>
   
-        {/* Action Buttons with Improved Info Block */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="bg-indigo-50 border-l-4 border-indigo-400 rounded-lg px-4 py-3 text-indigo-800 flex items-start">
             <InformationCircleIcon className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -206,6 +277,9 @@ export default function RespondentRatingPage() {
               <ul className="text-sm space-y-1 list-disc list-inside">
                 <li>Заповніть бали для кожного критерію</li>
                 <li>Прикріпіть необхідні підтверджуючі документи</li>
+                <li>Критерії з позначкою <span className="text-red-500">*</span> вимагають документів</li>
+                <li>Дозволені формати файлів: JPEG, PNG, GIF, PDF</li>
+                <li>Максимальний розмір файлу: 5MB</li>
               </ul>
             </div>
           </div>
@@ -225,7 +299,6 @@ export default function RespondentRatingPage() {
           </div>
         </div>
   
-        {/* Preview Modal */}
         {showPreview && rating && (
           <RatingPreviewModal
             items={rating.items}
@@ -237,4 +310,4 @@ export default function RespondentRatingPage() {
       </div>
     </div>
   );
-};
+}
