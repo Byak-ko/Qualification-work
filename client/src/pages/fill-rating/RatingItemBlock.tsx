@@ -1,5 +1,5 @@
 import Input from "../../components/ui/Input";
-import { TrashIcon, DocumentPlusIcon, StarIcon, InformationCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, DocumentPlusIcon, StarIcon, InformationCircleIcon, ExclamationCircleIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { RatingItem } from "../../types/Rating";
 import { toast } from "react-toastify";
 
@@ -12,6 +12,7 @@ type Props = {
   onScoreChange: (index: number, score: number) => void;
   onFileChange: (index: number, files: FileList | null) => void;
   onFileRemove: (itemIndex: number, fileIndex: number) => void;
+  onDocumentUrlRemove: (itemIndex: number, urlIndex: number) => void;
   reviewerComments?: Record<number, string>;
 };
 
@@ -21,6 +22,7 @@ export default function RatingItemBlock({
   onScoreChange,
   onFileChange,
   onFileRemove,
+  onDocumentUrlRemove,
   reviewerComments
 }: Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,6 +51,14 @@ export default function RatingItemBlock({
   };
 
   const reviewerComment = reviewerComments ? reviewerComments[item.id] : null;
+  const getFileNameFromUrl = (url: string) => {
+    try {
+      const urlParts = url.split('/');
+      return urlParts[urlParts.length - 1];
+    } catch (e) {
+      return 'Документ';
+    }
+  };
 
   return (
     <div className="relative bg-white border-2 border-indigo-200 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-400 ease-in-out transform hover:-translate-y-2 group">
@@ -119,31 +129,74 @@ export default function RatingItemBlock({
         </div>
       )}
 
-      {item.documents?.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {item.documents.map((file, fileIdx) => (
-            <li
-              key={fileIdx}
-              className="flex items-center justify-between
-                text-sm bg-indigo-50 rounded-lg px-4 py-2
-                hover:bg-indigo-100 transition-colors
-                shadow-sm hover:shadow-md"
-            >
-              <span className="text-gray-700 truncate max-w-[70%]">{file.name}</span>
-              <button
-                onClick={() => onFileRemove(index, fileIdx)}
-                className="ml-3 text-red-500 hover:text-red-700
-                  transition-colors duration-300
-                  hover:bg-red-100 rounded-full p-1"
+      {item.documentUrls && item.documentUrls.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <DocumentTextIcon className="w-5 h-5 mr-2 text-green-500" />
+            Завантажені раніше документи:
+          </h3>
+          <ul className="space-y-2">
+            {item.documentUrls.map((url, idx) => (
+              <li
+                key={`prev-${idx}`}
+                className="flex items-center justify-between
+                  text-sm bg-green-50 rounded-lg px-4 py-2
+                  hover:bg-green-100 transition-colors
+                  shadow-sm hover:shadow-md"
               >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            </li>
-          ))}
-        </ul>
+                <a 
+                  href={url} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[70%]"
+                >
+                  {getFileNameFromUrl(url)}
+                </a>
+                <button
+                  onClick={() => onDocumentUrlRemove(index, idx)}
+                  className="ml-3 text-red-500 hover:text-red-700
+                    transition-colors duration-300
+                    hover:bg-red-100 rounded-full p-1"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
-      {item.isDocNeed && item.score > 0 && item.documents.length === 0 && (
+      {item.documents?.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <DocumentPlusIcon className="w-5 h-5 mr-2 text-indigo-500" />
+            Нові документи:
+          </h3>
+          <ul className="space-y-2">
+            {item.documents.map((file, fileIdx) => (
+              <li
+                key={fileIdx}
+                className="flex items-center justify-between
+                  text-sm bg-indigo-50 rounded-lg px-4 py-2
+                  hover:bg-indigo-100 transition-colors
+                  shadow-sm hover:shadow-md"
+              >
+                <span className="text-gray-700 truncate max-w-[70%]">{file.name}</span>
+                <button
+                  onClick={() => onFileRemove(index, fileIdx)}
+                  className="ml-3 text-red-500 hover:text-red-700
+                    transition-colors duration-300
+                    hover:bg-red-100 rounded-full p-1"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {item.isDocNeed && item.score > 0 && item.documents.length === 0 && (!item.documentUrls || item.documentUrls.length === 0) && (
         <div className="mt-2 text-red-500 text-sm flex items-start">
           <InformationCircleIcon className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
           <span>Необхідно завантажити підтверджуючі документи</span>

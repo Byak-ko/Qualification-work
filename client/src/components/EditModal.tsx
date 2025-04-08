@@ -7,7 +7,7 @@ import Spinner from "./ui/Spinner";
 type Field = {
   name: string;
   label: string;
-  defaultValue?: string | number;
+  defaultValue?: string | number | boolean;
   type?: string;
   options?: { value: string | number; label: string }[];
   readOnly?: boolean;
@@ -35,8 +35,15 @@ function EditModal<T>({ isOpen, title, fields, onClose, onSubmit, errors, isSubm
   }, [fields, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement; // Приводимо до HTMLInputElement для доступу до checked
+    
+    // Спеціальна обробка для чекбоксів
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,41 +78,63 @@ function EditModal<T>({ isOpen, title, fields, onClose, onSubmit, errors, isSubm
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {fields.map((field) =>
-                field.options ? (
-                  <div key={field.name} className="group">
-                    <label className="block mb-2 text-sm font-medium text-indigo-700 group-hover:text-indigo-800 transition-colors duration-200">{field.label}</label>
-                    <select
-                      name={field.name}
-                      value={formData[field.name]}
-                      onChange={handleChange}
-                      disabled={field.readOnly}
-                      className="w-full px-4 py-2.5 bg-purple-50 border border-purple-200 rounded-xl text-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-200 hover:bg-purple-100"
-                      required
-                    >
-                      {field.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div key={field.name} className="group">
-                    <label className="block mb-2 text-sm font-medium text-indigo-700 group-hover:text-indigo-800 transition-colors duration-200">{field.label}</label>
-                    <input
-                      name={field.name}
-                      type={field.type || "text"}
-                      value={formData[field.name]}
-                      onChange={handleChange}
-                      readOnly={field.readOnly}
-                      required={!field.readOnly}
-                      className={`w-full px-4 py-2.5 bg-purple-50 border border-purple-200 rounded-xl text-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-200 hover:bg-purple-100 ${field.readOnly ? "bg-gray-100 cursor-not-allowed opacity-70" : ""
-                        }`}
-                    />
-                  </div>
-                )
-              )}
+              {fields.map((field) => {
+                // Спеціальна обробка для поля типу checkbox
+                if (field.type === "checkbox") {
+                  return (
+                    <div key={field.name} className="group flex items-center">
+                      <input
+                        name={field.name}
+                        type="checkbox"
+                        checked={!!formData[field.name]}
+                        onChange={handleChange}
+                        className="w-5 h-5 text-purple-600 border border-purple-200 rounded focus:ring-purple-400"
+                      />
+                      <label className="ml-2 text-sm font-medium text-indigo-700">{field.label}</label>
+                    </div>
+                  );
+                }
+                // Для поля з опціями (select)
+                else if (field.options) {
+                  return (
+                    <div key={field.name} className="group">
+                      <label className="block mb-2 text-sm font-medium text-indigo-700 group-hover:text-indigo-800 transition-colors duration-200">{field.label}</label>
+                      <select
+                        name={field.name}
+                        value={formData[field.name]}
+                        onChange={handleChange}
+                        disabled={field.readOnly}
+                        className="w-full px-4 py-2.5 bg-purple-50 border border-purple-200 rounded-xl text-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-200 hover:bg-purple-100"
+                        required
+                      >
+                        {field.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                }
+                // Для звичайних текстових полів
+                else {
+                  return (
+                    <div key={field.name} className="group">
+                      <label className="block mb-2 text-sm font-medium text-indigo-700 group-hover:text-indigo-800 transition-colors duration-200">{field.label}</label>
+                      <input
+                        name={field.name}
+                        type={field.type || "text"}
+                        value={formData[field.name]}
+                        onChange={handleChange}
+                        readOnly={field.readOnly}
+                        required={!field.readOnly}
+                        className={`w-full px-4 py-2.5 bg-purple-50 border border-purple-200 rounded-xl text-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-200 hover:bg-purple-100 ${field.readOnly ? "bg-gray-100 cursor-not-allowed opacity-70" : ""
+                          }`}
+                      />
+                    </div>
+                  );
+                }
+              })}
 
               {errors &&
                 Object.entries(errors).map(([key, err]) => (

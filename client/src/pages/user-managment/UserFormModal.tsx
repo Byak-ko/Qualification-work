@@ -2,7 +2,6 @@ import { Role, Degree, Position, User } from "../../types/User";
 import { Department } from "../../types/Department";
 import { motion, AnimatePresence } from "framer-motion";
 import EditModal from "../../components/EditModal";
-
 interface UserFormModalProps {
   isOpen: boolean;
   user: User | null;
@@ -12,7 +11,6 @@ interface UserFormModalProps {
   isSubmitting: boolean;
 }
 
-
 export default function UserFormModal({
   isOpen,
   user,
@@ -21,9 +19,23 @@ export default function UserFormModal({
   onSubmit,
   isSubmitting,
 }: UserFormModalProps) {
+  // Виправлена функція, яка правильно знаходить ключ за значенням в enum
+  const getEnumKeyByValue = (enumObj: any, value: string) => {
+    const entry = Object.entries(enumObj).find(([_, val]) => val === value);
+    return entry ? entry[0] : "";
+  };
 
-  const getEnumKey = (enumObj: any, value: string) => {
-    return Object.entries(enumObj).find(([val]) => val === value)?.[0] || "";
+  const handleSubmit = (data: Partial<User>) => {
+    if ('isAuthor' in data) {
+      if (typeof data.isAuthor === 'string') {
+        data.isAuthor = data.isAuthor === 'true';
+      }
+      if (typeof data.isAuthor !== 'boolean') {
+        data.isAuthor = Boolean(data.isAuthor);
+      }
+    }
+    
+    onSubmit(data);
   };
 
   return (
@@ -46,7 +58,7 @@ export default function UserFormModal({
               isOpen={isOpen}
               title={user ? "Редагувати користувача" : "Новий користувач"}
               onClose={onClose}
-              onSubmit={onSubmit}
+              onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               fields={[
                 { name: "lastName", label: "Прізвище", defaultValue: user?.lastName || "" },
@@ -64,7 +76,7 @@ export default function UserFormModal({
                   name: "degree",
                   label: "Науковий ступінь",
                   type: "select",
-                  defaultValue: user ? getEnumKey(Degree, user.degree): "NONE",
+                  defaultValue: user ? getEnumKeyByValue(Degree, user.degree) : "NONE",
                   options: Object.entries(Degree).map(([key, value]) => ({
                     label: value,
                     value: key,
@@ -74,7 +86,7 @@ export default function UserFormModal({
                   name: "position",
                   label: "Посада",
                   type: "select",
-                  defaultValue: user ? getEnumKey(Position, user.position) : "LECTURER",
+                  defaultValue: user ? getEnumKeyByValue(Position, user.position) : "LECTURER",
                   options: Object.entries(Position).map(([key, value]) => ({
                     label: value,
                     value: key,
@@ -96,6 +108,12 @@ export default function UserFormModal({
                   type: "select",
                   defaultValue: user ? user.department.id : departments[0]?.id,
                   options: departments.map((dep) => ({ label: dep.name, value: dep.id })),
+                },
+                {
+                  name: "isAuthor",
+                  label: "Автор рейтингу",
+                  type: "checkbox",
+                  defaultValue: user?.isAuthor || false,
                 },
               ]}
             />

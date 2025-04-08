@@ -10,3 +10,10 @@ export const submitReview = async (ratingId: number, respondentId: number, paylo
   const response = await api.post(`/ratings/${ratingId}/review/${respondentId}`, payload);
   return response.data;
 };
+
+export const getRatingsByUserId = async () => {
+  const response = await api.get(`/ratings/user`);
+  return response.data;
+};
+
+

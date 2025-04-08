@@ -15,6 +15,7 @@ import ReviewRatingPage from "../pages/rating-review/ReviewRatingPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import EditRatingPage from "../pages/rating-create/EditRatingPage";
 import RatingsPage from "../pages/RatingsPage";
+import DocumentViewerPage from "../pages/DocumentViewerPage";
 
 
 export const router = createBrowserRouter([
@@ -57,7 +58,7 @@ export const router = createBrowserRouter([
       {
         path: "ratings/create",
         element: (
-          <ProtectedRoute allowedRoles={[Role.ADMIN]}>
+          <ProtectedRoute>
             <CreateRatingPage />
           </ProtectedRoute>
         ),
@@ -65,7 +66,7 @@ export const router = createBrowserRouter([
       {
         path: "ratings/:id/edit",
         element: (
-          <ProtectedRoute allowedRoles={[Role.ADMIN]}>
+          <ProtectedRoute>
             <EditRatingPage />
           </ProtectedRoute>
         ),
@@ -73,7 +74,7 @@ export const router = createBrowserRouter([
       {
         path: "ratings/:id/fill",
         element: (
-          <ProtectedRoute allowedRoles={[Role.TEACHER]}>
+          <ProtectedRoute>
             <FillRatingPage />
           </ProtectedRoute>
         ),
@@ -86,11 +87,11 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      
+
       {
         path: "reports",
         element: (
-          <ProtectedRoute allowedRoles={[Role.TEACHER, Role.ADMIN]}>
+          <ProtectedRoute>
             <ReportsPage />
           </ProtectedRoute>
         ),
@@ -100,6 +101,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <UserProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/documents/view",
+        element: (
+          <ProtectedRoute>
+            <DocumentViewerPage />
           </ProtectedRoute>
         ),
       }

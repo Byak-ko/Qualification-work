@@ -23,24 +23,19 @@ export default function ReviewerSelector({
   selectedRespondentIds,
 }: Props) {
   const [search, setSearch] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   
-  // Відстеження департаментів і підрозділів
   const [eligibleDepartments, setEligibleDepartments] = useState<Set<string>>(new Set());
   const [eligibleUnits, setEligibleUnits] = useState<Set<string>>(new Set());
   
-  // Відстеження вибраних кафедр і підрозділів
   const [selectedDepartmentMap, setSelectedDepartmentMap] = useState<Map<string, number>>(new Map());
   const [selectedUnitMap, setSelectedUnitMap] = useState<Map<string, number>>(new Map());
   
-  // Розділені списки користувачів
   const [departmentUsers, setDepartmentUsers] = useState<User[]>([]);
   const [unitUsers, setUnitUsers] = useState<User[]>([]);
   
-  // Відстеження попередніх респондентів для відслідковування змін
   const [prevRespondentIds, setPrevRespondentIds] = useState<number[]>([]);
 
-  // Скидання вибраних рецензентів при зміні респондентів
+  
   useEffect(() => {
     const hasChanged = selectedRespondentIds.length !== prevRespondentIds.length || 
       selectedRespondentIds.some(id => !prevRespondentIds.includes(id));
@@ -52,7 +47,7 @@ export default function ReviewerSelector({
     }
   }, [selectedRespondentIds, prevRespondentIds, setDepartmentReviewerIds, setUnitReviewerIds]);
 
-  // Визначення доступних департаментів і підрозділів на основі респондентів
+  
   useEffect(() => {
     setEligibleDepartments(new Set());
     setEligibleUnits(new Set());
@@ -78,12 +73,10 @@ export default function ReviewerSelector({
     setEligibleUnits(units);
   }, [selectedRespondentIds, allUsers]);
 
-  // Фільтрування користувачів
+  
   useEffect(() => {
     const usersExcludingCurrent = allUsers.filter(user => user.id !== currentUser.id);
-    setFilteredUsers(usersExcludingCurrent);
-    
-    // Створення окремих списків користувачів для департаментів і підрозділів
+
     const deptUsers: User[] = [];
     const unitUsersList: User[] = [];
     
@@ -91,12 +84,10 @@ export default function ReviewerSelector({
       let addToDepartments = false;
       let addToUnits = false;
       
-      // Перевірка департаменту
       if (user.department?.name && eligibleDepartments.has(user.department.name)) {
         addToDepartments = true;
       }
       
-      // Перевірка підрозділу
       if (user.department?.unit.name && eligibleUnits.has(user.department.unit.name)) {
         addToUnits = true;
       }
@@ -114,12 +105,12 @@ export default function ReviewerSelector({
     setUnitUsers(unitUsersList);
   }, [allUsers, currentUser.id, eligibleDepartments, eligibleUnits]);
 
-  // Оновлення вибраних департаментів і підрозділів
+  
   useEffect(() => {
     const deptMap = new Map<string, number>();
     const unitMap = new Map<string, number>();
 
-    // Відстеження вибраних кафедр
+    
     selectedDepartmentReviewerIds.forEach(id => {
       const reviewer = allUsers.find(user => user.id === id);
       if (reviewer?.department?.name && eligibleDepartments.has(reviewer.department.name)) {
@@ -127,7 +118,7 @@ export default function ReviewerSelector({
       }
     });
 
-    // Відстеження вибраних підрозділів
+    
     selectedUnitReviewerIds.forEach(id => {
       const reviewer = allUsers.find(user => user.id === id);
       if (reviewer?.department?.unit.name && eligibleUnits.has(reviewer.department.unit.name)) {
@@ -139,39 +130,39 @@ export default function ReviewerSelector({
     setSelectedUnitMap(unitMap);
   }, [selectedDepartmentReviewerIds, selectedUnitReviewerIds, allUsers, eligibleDepartments, eligibleUnits]);
 
-  // Додавання/видалення рецензентів для кафедр
+  
   const toggleDepartmentReviewer = (user: User) => {
     const isDepartmentSelected = selectedDepartmentReviewerIds.includes(user.id);
     
     if (isDepartmentSelected) {
-      // Видалення з рецензентів департаменту
+      
       setDepartmentReviewerIds(prev => prev.filter(id => id !== user.id));
     } else {
       const departmentName = user.department?.name;
       if (departmentName && !selectedDepartmentMap.has(departmentName)) {
-        // Додавання як рецензента департаменту
+        
         setDepartmentReviewerIds(prev => [...prev, user.id]);
       }
     }
   };
 
-  // Додавання/видалення рецензентів для підрозділів
+  
   const toggleUnitReviewer = (user: User) => {
     const isUnitSelected = selectedUnitReviewerIds.includes(user.id);
     
     if (isUnitSelected) {
-      // Видалення з рецензентів підрозділу
+      
       setUnitReviewerIds(prev => prev.filter(id => id !== user.id));
     } else {
       const unitName = user.department?.unit.name;
       if (unitName && !selectedUnitMap.has(unitName)) {
-        // Додавання як рецензента підрозділу
+        
         setUnitReviewerIds(prev => [...prev, user.id]);
       }
     }
   };
 
-  // Фільтрація користувачів по пошуку
+  
   const filterUsersBySearch = (users: User[]) => {
     return users.filter((user) =>
       `${user.firstName} ${user.lastName} ${user.lastName} ${user.firstName}`
@@ -180,44 +171,44 @@ export default function ReviewerSelector({
     );
   };
 
-  // Фільтровані списки користувачів
+  
   const filteredDepartmentUsers = filterUsersBySearch(departmentUsers);
   const filteredUnitUsers = filterUsersBySearch(unitUsers);
 
-  // Перевірка, чи можна вибрати користувача як рецензента департаменту
+  
   const canSelectDepartmentUser = (user: User) => {
     if (selectedDepartmentReviewerIds.includes(user.id)) {
-      return true; // Вже вибраний
+      return true; 
     }
 
     const departmentName = user.department?.name;
     if (!departmentName || !eligibleDepartments.has(departmentName)) {
-      return false; // Не належить до доступного департаменту
+      return false; 
     }
 
     return !selectedDepartmentMap.has(departmentName);
   };
 
-  // Перевірка, чи можна вибрати користувача як рецензента підрозділу
+  
   const canSelectUnitUser = (user: User) => {
     if (selectedUnitReviewerIds.includes(user.id)) {
-      return true; // Вже вибраний
+      return true; 
     }
 
-    // Перевірка, чи користувач вже є рецензентом департаменту
+    
     if (selectedDepartmentReviewerIds.includes(user.id)) {
-      return false; // Вже обраний як рецензент департаменту
+      return false; 
     }
 
     const unitName = user.department?.unit.name;
     if (!unitName || !eligibleUnits.has(unitName)) {
-      return false; // Не належить до доступного підрозділу
+      return false; 
     }
 
     return !selectedUnitMap.has(unitName);
   };
 
-  // Відображення списку користувачів для кафедр
+  
   const renderDepartmentUserList = () => {
     if (filteredDepartmentUsers.length === 0) {
       return (
@@ -272,7 +263,7 @@ export default function ReviewerSelector({
     });
   };
 
-  // Відображення списку користувачів для підрозділів
+  
   const renderUnitUserList = () => {
     if (filteredUnitUsers.length === 0) {
       return (

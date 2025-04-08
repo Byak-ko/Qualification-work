@@ -57,7 +57,6 @@ export default function UserInfoModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             initial={{ opacity: 0 }}
@@ -65,7 +64,6 @@ export default function UserInfoModal({
             exit={{ opacity: 0 }}
           />
 
-          {/* Modal */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{
@@ -94,7 +92,6 @@ export default function UserInfoModal({
                             border border-gray-100 
                             overflow-hidden 
                             relative">
-              {/* Header */}
               <div className="bg-gradient-to-r from-blue-50 to-white 
                               px-6 py-4 
                               border-b border-gray-100 
@@ -117,7 +114,6 @@ export default function UserInfoModal({
                 </button>
               </div>
 
-              {/* User Details */}
               <div className="p-6 space-y-4">
                 {userInfoItems.map((item, index) => (
                   <div
@@ -140,7 +136,6 @@ export default function UserInfoModal({
                 ))}
               </div>
 
-              {/* Footer */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
                 <button
                   onClick={onClose}

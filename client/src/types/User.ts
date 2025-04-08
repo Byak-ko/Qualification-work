@@ -27,8 +27,9 @@ export type User = {
     firstName: string;
     lastName: string;
     role: Role;
-    degree: keyof typeof Degree; 
-    position: keyof typeof Position; 
+    degree: Degree; 
+    position: Position; 
+    isAuthor: boolean;
     department: {
         id: number;
         name: string;

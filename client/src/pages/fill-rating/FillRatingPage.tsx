@@ -8,7 +8,7 @@ import RatingItemBlock from './RatingItemBlock';
 import RatingPreviewModal from './RatingPreviewModal';
 import { DocumentMagnifyingGlassIcon, DocumentCheckIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { Rating } from '../../types/Rating';
-import { RatingParticipantStatus, ReviewLevel } from '../../types/RatingTypes';
+import { RatingParticipantStatus, ReviewLevel } from '../../types/Rating';
 
 export default function RespondentRatingPage() {
   const { id } = useParams();
@@ -25,15 +25,17 @@ export default function RespondentRatingPage() {
       .get(`/ratings/${id}/respondent`)
       .then((res) => {
         const data = res.data;
-        const itemsWithDefaults = data.items.map((item: any) => ({
-          ...item,
-          score: 0,
-          documents: [],
-          isDocNeed: item.isDocNeed || false, 
-        }));
+        const itemsWithDefaults = data.items.map((item: any) => {
+          return {
+            ...item,
+            score: item.score || 0,
+            documents: [],
+            documentUrls: item.documentUrls || [],
+            isDocNeed: item.isDocNeed || false,
+          };
+        });
         setRating({ ...data, items: itemsWithDefaults });
-        
-        // If participant is in REVISION status, get the approvals and comments
+        console.log(itemsWithDefaults);
         if (data.participantStatus === RatingParticipantStatus.REVISION) {
           fetchReviewerComments(data.participantId);
         }
@@ -42,26 +44,21 @@ export default function RespondentRatingPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Function to fetch reviewer comments
   const fetchReviewerComments = async (participantId: number) => {
     try {
       const res = await api.get(`/ratings/participants/${participantId}/approvals`);
       const approvals = res.data;
-      
-      // Get comments per review level hierarchy
+
       const authorComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.AUTHOR)?.comments || {};
       const unitComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.UNIT)?.comments || {};
       const departmentComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.DEPARTMENT)?.comments || {};
-      
-      // Merge comments with priority: author > unit > department
+
       const mergedComments: Record<number, string> = {};
-      
-      // Loop through all potential item IDs
+
       if (rating) {
         rating.items.forEach(item => {
           const itemId = item.id;
-          
-          // Apply hierarchy: author comments take precedence, then unit, then department
+
           if (authorComments[itemId]) {
             mergedComments[itemId] = authorComments[itemId];
           } else if (unitComments[itemId]) {
@@ -71,11 +68,10 @@ export default function RespondentRatingPage() {
           }
         });
       }
-      
+
       setReviewerComments(mergedComments);
     } catch (error) {
-      console.error('Failed to fetch reviewer comments:', error);
-      // Don't show error to user, just continue without comments
+      console.error('Помилка завантаження коментарів:', error);
     }
   };
 
@@ -116,56 +112,81 @@ export default function RespondentRatingPage() {
     });
   };
 
+  const handleDocumentUrlRemove = (itemIndex: number, urlIndex: number) => {
+    setRating((prev) => {
+      if (!prev) return prev;
+      const updatedItems = [...prev.items];
+      
+      if (updatedItems[itemIndex].documentUrls) {
+        updatedItems[itemIndex].documentUrls = updatedItems[itemIndex].documentUrls.filter(
+          (_, i) => i !== urlIndex
+        );
+      }
+      
+      return { ...prev, items: updatedItems };
+    });
+  };
+
   const handlePreview = () => {
     if (!rating) return;
-
+  
     const isValidScores = rating.items.every(
       (item) => {
         const score = item.score;
         return score >= 0 && (item.maxScore === 0 || score <= item.maxScore);
       }
     );
-
+  
     const isValidFiles = rating.items.every(
-      (item) => !item.isDocNeed || item.score === 0 || item.documents.length > 0
+      (item) => 
+        !item.isDocNeed || 
+        item.score === 0 || 
+        item.documents.length > 0 || 
+        (item.documentUrls && item.documentUrls.length > 0)
     );
-
+  
     if (!isValidScores) {
       toast.error('Перевірте правильність введених балів');
       return;
     }
-
+  
     if (!isValidFiles) {
       toast.error('Деякі критерії вимагають підтверджуючих документів');
       return;
     }
-
+  
     setShowPreview(true);
   };
 
   const uploadDocument = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await api.post('/ratings/documents/upload', formData);
+    const res = await api.post('/documents/upload', formData);
     return res.data.url;
   };
-  
+
   const handleSubmit = async () => {
     if (!rating) return;
     setSubmitting(true);
-  
+
     try {
       const uploadedDocs: Record<number, string[]> = {};
-  
+
       for (const item of rating.items) {
         const urls: string[] = [];
+
+        if (item.documentUrls) {
+          urls.push(...item.documentUrls);
+        }
+
         for (const file of item.documents) {
           const url = await uploadDocument(file);
           urls.push(url);
         }
+
         uploadedDocs[item.id] = urls;
       }
-  
+
       await api.post(`/ratings/${id}/respondent-fill`, {
         items: rating.items.map((item) => ({
           id: item.id,
@@ -173,7 +194,7 @@ export default function RespondentRatingPage() {
           documents: uploadedDocs[item.id] || [],
         })),
       });
-  
+
       toast.success('Рейтинг успішно заповнено');
       navigate('/ratings');
     } catch (err) {
@@ -190,22 +211,24 @@ export default function RespondentRatingPage() {
       // Критерій вважається заповненим, якщо:
       // 1. Він має бал = 0 (не нараховано балів)
       // 2. Або документи не обов'язкові і вказано бал
-      // 3. Або документи обов'язкові, вказано бал і завантажено документи
+      // 3. Або документи обов'язкові, вказано бал і завантажено документи (нові або старі)
       return (
         item.score === 0 || 
         (!item.isDocNeed && item.score > 0) || 
-        (item.isDocNeed && item.score > 0 && item.documents.length > 0)
+        (item.isDocNeed && item.score > 0 && (
+          item.documents.length > 0 || 
+          (item.documentUrls && item.documentUrls.length > 0)
+        ))
       );
     }).length;
   };
 
-  if (loading || !rating) return <Spinner size='medium'/>;
+  if (loading || !rating) return <Spinner size='medium' />;
 
   const completedItemsCount = getCompletedItemsCount();
   const totalItemsCount = rating.items.length;
   const completionPercentage = Math.round((completedItemsCount / totalItemsCount) * 100);
-  
-  // Determine if we're in revision mode
+
   const isRevisionMode = rating.participantStatus === RatingParticipantStatus.REVISION;
 
   return (
@@ -219,7 +242,7 @@ export default function RespondentRatingPage() {
                 <DocumentCheckIcon className="w-8 h-8 mr-3" />
                 {isRevisionMode ? 'Коригування рейтингу' : 'Заповнення рейтингу'}
               </h1>
-              
+
               <div className="bg-white/20 rounded-xl px-4 py-2 text-white backdrop-blur-sm flex items-center">
                 <div className="mr-3">
                   <div className="text-xs text-white/80 mb-1">Заповнено</div>
@@ -229,12 +252,12 @@ export default function RespondentRatingPage() {
                 </div>
                 <svg className="w-10 h-10" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"></circle>
-                  <circle 
-                    cx="18" 
-                    cy="18" 
-                    r="16" 
-                    fill="none" 
-                    stroke="white" 
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    stroke="white"
                     strokeWidth="2"
                     strokeDasharray={`${completionPercentage} 100`}
                     strokeLinecap="round"
@@ -243,8 +266,8 @@ export default function RespondentRatingPage() {
                 </svg>
               </div>
             </div>
-            <p className="text-white/80 mt-2 text-lg font-medium">{rating.name}</p>
-            
+            <p className="text-white/80 mt-2 text-lg font-medium">{rating.title}</p>
+
             {isRevisionMode && (
               <div className="mt-3 bg-white/10 px-4 py-3 rounded-lg backdrop-blur-sm">
                 <p className="text-white font-medium">Рейтинг потребує коригування. Перегляньте коментарі перевіряючого.</p>
@@ -252,7 +275,7 @@ export default function RespondentRatingPage() {
             )}
           </div>
         </div>
-  
+
         <div className="bg-white shadow-lg rounded-2xl p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {rating.items.map((item, index) => (
@@ -263,12 +286,13 @@ export default function RespondentRatingPage() {
                 onScoreChange={handleScoreChange}
                 onFileChange={handleFileChange}
                 onFileRemove={handleFileRemove}
+                onDocumentUrlRemove={handleDocumentUrlRemove}
                 reviewerComments={reviewerComments || undefined}
               />
             ))}
           </div>
         </div>
-  
+
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="bg-indigo-50 border-l-4 border-indigo-400 rounded-lg px-4 py-3 text-indigo-800 flex items-start">
             <InformationCircleIcon className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -283,7 +307,7 @@ export default function RespondentRatingPage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
             <Button
               onClick={handlePreview}
@@ -298,7 +322,7 @@ export default function RespondentRatingPage() {
             </Button>
           </div>
         </div>
-  
+
         {showPreview && rating && (
           <RatingPreviewModal
             items={rating.items}

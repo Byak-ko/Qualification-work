@@ -14,24 +14,54 @@ import {
   DocumentPlusIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
+  DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline';
+import { RatingType } from "../../types/Rating";
+
+interface RatingTemplate {
+  id: number;
+  title: string;
+  type: string;
+  items: {
+    name: string;
+    maxScore: number;
+    comment: string;
+    isDocNeed: boolean;
+  }[];
+}
 
 export default function CreateRatingPage() {
-  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
   const [type, setType] = useState("");
   const [selectedRespondentIds, setSelectedRespondentIds] = useState<number[]>([]);
   const [items, setItems] = useState([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [departmentReviewerIds, setDepartmentReviewerIds] = useState<number[]>([]);
   const [unitReviewerIds, setUnitReviewerIds] = useState<number[]>([]);
+
+  const [templates, setTemplates] = useState<RatingTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | "">("");
+  const [useTemplate, setUseTemplate] = useState(false);
 
   const { currentUser } = useAuth();
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
     api.get("/users").then((res) => setAllUsers(res.data));
+    
+    api.get("/ratings").then((res) => {
+      const availableTemplates = res.data.map((rating: any) => ({
+        id: rating.id,
+        title: rating.title,
+        type: rating.type,
+        items: rating.items
+      }));
+      setTemplates(availableTemplates);
+    }).catch(err => {
+      toast.error("Помилка завантаження шаблонів рейтингів");
+      console.error(err);
+    });
   }, []);
 
   const navigate = useNavigate();
@@ -50,6 +80,30 @@ export default function CreateRatingPage() {
 
     fetchData();
   }, [currentUserId]);
+
+  const handleTemplateChange = async (templateId: number | "") => {
+    setSelectedTemplateId(templateId);
+    
+    if (templateId === "") {
+      setTitle("");
+      setType("");
+      setItems([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
+      return;
+    }
+    
+    try {
+      const selectedTemplate = templates.find(t => t.id === templateId);
+      
+      if (selectedTemplate) {
+        setTitle(selectedTemplate.title);
+        setType(selectedTemplate.type);
+        setItems([...selectedTemplate.items]);
+      }
+    } catch (err) {
+      toast.error("Помилка при завантаженні шаблону");
+      console.error(err);
+    }
+  };
 
   const handleRespondentChange = (userId: number) => {
     if (selectedRespondentIds.includes(userId)) {
@@ -71,9 +125,9 @@ export default function CreateRatingPage() {
     const updated = [...items];
     updated[index] = {
       ...updated[index],
-      [field]: 
-        field === "maxScore" ? Number(value) : 
-        field === "isDocNeed" ? Boolean(value) : value,
+      [field]:
+        field === "maxScore" ? Number(value) :
+          field === "isDocNeed" ? Boolean(value) : value,
     };
     setItems(updated);
   };
@@ -85,7 +139,7 @@ export default function CreateRatingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !type.trim()) {
+    if (!title.trim() || !type.trim()) {
       toast.error("Заповніть назву та тип рейтингу");
       return;
     }
@@ -102,7 +156,7 @@ export default function CreateRatingPage() {
       setIsSubmitting(true);
       const reviewerDepartmentsIds = departmentReviewerIds;
       const reviewerUnitsIds = unitReviewerIds;
-      const payload = { name, type, respondentIds: selectedRespondentIds, reviewerDepartmentsIds, reviewerUnitsIds, items };
+      const payload = { title, type, respondentIds: selectedRespondentIds, reviewerDepartmentsIds, reviewerUnitsIds, items };
       console.log(payload);
       await api.post("/ratings", payload);
       toast.success("Рейтинг успішно створено!");
@@ -130,7 +184,66 @@ export default function CreateRatingPage() {
         </div>
 
         <div className="space-y-8">
-          {/* Блок 1: Основна інформація */}
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+            <div className="flex items-center text-blue-800 mb-4">
+              <DocumentDuplicateIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-bold">Тип створення</h2>
+            </div>
+            
+            <div className="flex items-center space-x-4 mb-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!useTemplate}
+                  onChange={() => {
+                    setUseTemplate(false);
+                    setSelectedTemplateId("");
+                    setTitle("");
+                    setType("");
+                    setItems([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
+                  }}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700">Новий рейтинг</span>
+              </label>
+              
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={useTemplate}
+                  onChange={() => setUseTemplate(true)}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700">За шаблоном</span>
+              </label>
+            </div>
+            
+            {useTemplate && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Виберіть шаблон
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                    <DocumentDuplicateIcon className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => handleTemplateChange(e.target.value ? Number(e.target.value) : "")}
+                    className="border border-gray-300 py-2 px-3 rounded-lg text-gray-900 bg-white transition duration-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm pl-10 w-full"
+                  >
+                    <option value="">Виберіть шаблон рейтингу</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.title} ({template.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <DocumentPlusIcon className="w-6 h-6 mr-2" />
@@ -141,25 +254,37 @@ export default function CreateRatingPage() {
                 label="Назва рейтингу"
                 type="text"
                 placeholder="Введіть назву рейтингу"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="shadow-sm"
                 icon={<DocumentPlusIcon className="w-5 h-5 text-blue-500" />}
               />
 
-              <Input
-                label="Тип рейтингу"
-                type="text"
-                placeholder="Введіть тип рейтингу"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="shadow-sm"
-                icon={<ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />}
-              />
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тип рейтингу
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                    <ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as RatingType)}
+                    className="border border-gray-300 py-2 px-3 rounded-lg text-gray-900 bg-white transition duration-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm pl-10 w-full"
+                  >
+                    <option value="" disabled>Виберіть тип рейтингу</option>
+                    {Object.values(RatingType).map((ratingType) => (
+                      <option key={ratingType} value={ratingType}>
+                        {ratingType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Блок 2: Критерії оцінювання */}
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <ClipboardDocumentListIcon className="w-6 h-6 mr-2" />
@@ -173,7 +298,6 @@ export default function CreateRatingPage() {
             />
           </div>
 
-          {/* Блок 3: Респонденти */}
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <UserGroupIcon className="w-6 h-6 mr-2" />
@@ -182,14 +306,11 @@ export default function CreateRatingPage() {
             <RespondentSelector
               users={allUsers}
               selectedRespondentIds={selectedRespondentIds}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
               onSelect={handleRespondentChange}
               onSelectMultiple={handleMultipleRespondentChange}
             />
           </div>
 
-          {/* Блок 4: Рецензенти */}
           {currentUser && selectedRespondentIds.length > 0 && (
             <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
               <div className="flex items-center text-blue-800 mb-4">

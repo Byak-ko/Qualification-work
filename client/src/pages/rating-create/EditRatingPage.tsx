@@ -10,7 +10,7 @@ import RespondentSelector from "./RespondentSelector";
 import RatingItemsEditor from "./RatingItemsEditor";
 import Input from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
-import { Rating, RatingItem } from "../../types/Rating";
+import { Rating, RatingItem, RatingType } from "../../types/Rating";
 import {
   StarIcon,
   DocumentPlusIcon,
@@ -19,19 +19,18 @@ import {
   PlusCircleIcon
 } from '@heroicons/react/24/outline';
 
-export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents"> & { 
+export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents"> & {
   isDocNeed?: boolean;
-  id?: number; // Make id optional for new items
+  id?: number;
 };
 
 export default function EditRatingPage() {
-  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
   const [type, setType] = useState("");
   const [selectedRespondentIds, setSelectedRespondentIds] = useState<number[]>([]);
   const [items, setItems] = useState<EditableRatingItem[]>([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [departmentReviewerIds, setDepartmentReviewerIds] = useState<number[]>([]);
   const [unitReviewerIds, setUnitReviewerIds] = useState<number[]>([]);
 
@@ -45,49 +44,49 @@ export default function EditRatingPage() {
       try {
         const usersRes = await api.get<User[]>("/users");
         setAllUsers(usersRes.data);
-        return usersRes.data; 
+        return usersRes.data;
       } catch (err) {
         toast.error("Помилка при завантаженні користувачів");
       }
     };
-  
+
     const fetchRatingDetails = async () => {
       try {
         const ratingRes = await api.get<Rating>(`/ratings/${id}`);
         const rating = ratingRes.data;
         console.log(rating);
-        setName(rating.name);
+        setTitle(rating.title);
         setType(rating.type);
         setSelectedRespondentIds(rating.participants.map(({ respondent }) => respondent.id));
-        
+
         if (rating.departmentReviewers) {
           setDepartmentReviewerIds(rating.departmentReviewers.map((reviewer: User) => reviewer.id));
         }
-        
+
         if (rating.unitReviewers) {
           setUnitReviewerIds(rating.unitReviewers.map((reviewer: User) => reviewer.id));
         }
-        
+
         // Fallback if API doesn't return separate arrays
         if (!rating.departmentReviewers || !rating.unitReviewers) {
           const departmentIds: number[] = [];
           const unitIds: number[] = [];
-          
+
           // Find unique departmentReviewers and unitReviewers from participants
           rating.participants.forEach(participant => {
             if (participant.departmentReviewer && !departmentIds.includes(participant.departmentReviewer.id)) {
               departmentIds.push(participant.departmentReviewer.id);
             }
-            
+
             if (participant.unitReviewer && !unitIds.includes(participant.unitReviewer.id)) {
               unitIds.push(participant.unitReviewer.id);
             }
           });
-          
+
           setDepartmentReviewerIds(departmentIds);
           setUnitReviewerIds(unitIds);
         }
-        
+
         // Adapt items with isDocNeed field
         setItems(rating.items.map(item => ({
           id: item.id,
@@ -126,9 +125,9 @@ export default function EditRatingPage() {
     const updated = [...items];
     updated[index] = {
       ...updated[index],
-      [field]: 
-        field === "maxScore" ? Number(value) : 
-        field === "isDocNeed" ? Boolean(value) : value,
+      [field]:
+        field === "maxScore" ? Number(value) :
+          field === "isDocNeed" ? Boolean(value) : value,
     };
     setItems(updated);
   };
@@ -140,7 +139,7 @@ export default function EditRatingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !type.trim()) {
+    if (!title.trim() || !type.trim()) {
       toast.error("Заповніть назву та тип рейтингу");
       return;
     }
@@ -163,7 +162,7 @@ export default function EditRatingPage() {
       const reviewerDepartmentsIds = departmentReviewerIds;
       const reviewerUnitsIds = unitReviewerIds;
       const payload = {
-        name,
+        title,
         type,
         respondentIds: selectedRespondentIds,
         reviewerDepartmentsIds,
@@ -187,10 +186,8 @@ export default function EditRatingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-blue-100 p-8 relative overflow-hidden">
-        {/* Top accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-blue-700"></div>
 
-        {/* Header */}
         <div className="flex items-center justify-center mb-8 space-x-4">
           <div className="bg-yellow-100 p-3 rounded-full shadow-md">
             <StarIcon className="w-10 h-10 text-yellow-500" />
@@ -200,9 +197,7 @@ export default function EditRatingPage() {
           </h1>
         </div>
 
-        {/* Form Container */}
         <div className="space-y-8">
-          {/* Rating Basic Info */}
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <DocumentPlusIcon className="w-6 h-6 mr-2" />
@@ -213,25 +208,37 @@ export default function EditRatingPage() {
                 label="Назва рейтингу"
                 type="text"
                 placeholder="Введіть назву рейтингу"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="shadow-sm"
                 icon={<DocumentPlusIcon className="w-5 h-5 text-blue-500" />}
               />
 
-              <Input
-                label="Тип рейтингу"
-                type="text"
-                placeholder="Введіть тип рейтингу"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="shadow-sm"
-                icon={<ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />}
-              />
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тип рейтингу
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                    <ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as RatingType)}
+                    className="border border-gray-300 py-2 px-3 rounded-lg text-gray-900 bg-white transition duration-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm pl-10 w-full"
+                  >
+                    <option value="" disabled>Виберіть тип рейтингу</option>
+                    {Object.values(RatingType).map((ratingType) => (
+                      <option key={ratingType} value={ratingType}>
+                        {ratingType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Rating Items Editor */}
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <ClipboardDocumentListIcon className="w-6 h-6 mr-2" />
@@ -245,7 +252,6 @@ export default function EditRatingPage() {
             />
           </div>
 
-          {/* Respondent Selector */}
           <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
             <div className="flex items-center text-blue-800 mb-4">
               <UserGroupIcon className="w-6 h-6 mr-2" />
@@ -254,14 +260,11 @@ export default function EditRatingPage() {
             <RespondentSelector
               users={allUsers}
               selectedRespondentIds={selectedRespondentIds}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
               onSelect={handleRespondentChange}
               onSelectMultiple={handleMultipleRespondentChange}
             />
           </div>
 
-          {/* Reviewer Selector */}
           {currentUser && selectedRespondentIds.length > 0 && (
             <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
               <div className="flex items-center text-blue-800 mb-4">
@@ -283,7 +286,6 @@ export default function EditRatingPage() {
             </div>
           )}
 
-          {/* Submit Button */}
           <div className="pt-4">
             <Button
               onClick={handleSubmit}
@@ -292,7 +294,7 @@ export default function EditRatingPage() {
             >
               {isSubmitting ? (
                 <>
-                  <Spinner size="small"/>
+                  <Spinner size="small" />
                   <span>Оновлення...</span>
                 </>
               ) : (
@@ -305,7 +307,6 @@ export default function EditRatingPage() {
           </div>
         </div>
 
-        {/* Bottom accent line */}
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-blue-700"></div>
       </div>
     </div>

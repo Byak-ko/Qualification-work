@@ -68,7 +68,7 @@ export default function AdminUsersPage() {
         ...parsedData,
         departmentId: Number(parsedData.departmentId),
       };
-  
+      console.log("Form data",formattedData);
       if (selectedUser) {
         await api.patch(`/users/${selectedUser.id}`, formattedData);
         toast.success("Користувача оновлено");

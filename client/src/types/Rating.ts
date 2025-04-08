@@ -1,13 +1,19 @@
-import { RatingParticipantStatus } from "./RatingTypes";
+import { Department } from "./Department";
 import { User } from "./User";
 
 export type Rating = {
-    name: string;
-    type: string;
+    title: string;
+    type: RatingType;
     status: string;
     id: number;
     author: number;
     participants: { 
+        firstName: string;
+        lastName: string;
+        department: Department;
+        approvalStatus: RatingApprovalStatus;
+        participantStatus: RatingParticipantStatus;
+        id: number;
         respondent: User;
         departmentReviewer?: User;
         unitReviewer?: User;
@@ -17,6 +23,7 @@ export type Rating = {
     unitReviewers?: User[];
     items: RatingItem[];
     participantStatus: RatingParticipantStatus;
+    date: string;
 };
 
 export type RatingItem = {
@@ -27,10 +34,42 @@ export type RatingItem = {
     score: number;
     documents: File[];
     isDocNeed: boolean;
+    documentUrls?: string[];
 };
 
 export type RatingApproval = {
     ratingId: number;
     comments: Record<string, unknown>;
-    status: "pending" | "approved" | "revision";
+    status: RatingApprovalStatus;
 };
+
+export enum RatingParticipantStatus {
+    PENDING = 'pending',
+    FILLED = 'filled',
+    APPROVED = 'approved',
+    REVISION = 'revision',
+  }
+  
+  export enum RatingStatus {
+    CREATED = 'created',
+    PENDING = 'pending',
+    CLOSED = 'closed',
+  }
+
+  export enum RatingType {
+    SCIENTIFIC = "Науковий",
+    EDUCATIONAL_METHODICAL = "Навчально-методичний",
+    ORGANIZATIONAL_EDUCATIONAL = "Організаційно-виховний"
+  }
+  
+  export enum RatingApprovalStatus {
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REVISION = 'revision',
+  }
+  
+  export enum ReviewLevel {
+    DEPARTMENT = 'department',
+    UNIT = 'unit',
+    AUTHOR = 'author',
+  }

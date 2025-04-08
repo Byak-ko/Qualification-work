@@ -6,8 +6,6 @@ import { MagnifyingGlassIcon, UserIcon, CheckIcon, BuildingOfficeIcon } from "@h
 type Props = {
   users: User[];
   selectedRespondentIds: number[];
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   onSelect: (userId: number) => void;
   onSelectMultiple: (userIds: number[]) => void;
 };
@@ -15,8 +13,6 @@ type Props = {
 export default function RespondentSelector({
   users,
   selectedRespondentIds,
-  searchQuery,
-  onSearchChange,
   onSelect,
   onSelectMultiple,
 }: Props) {
@@ -47,10 +43,6 @@ export default function RespondentSelector({
     
     setFilteredUsers(filtered);
   }, [users, nameSearch, departmentSearch]);
-
-  useEffect(() => {
-  onSearchChange(`${nameSearch} ${departmentSearch}`.trim());
-}, [nameSearch, departmentSearch, onSearchChange]);
 
   const handleDepartmentSelect = (departmentName: string) => {
     const departmentUsers = users
