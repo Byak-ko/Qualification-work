@@ -9,35 +9,41 @@ export enum RatingStatus {
   CLOSED = 'closed',
 }
 
+export enum RatingType {
+  SCIENTIFIC = "Науковий",
+  EDUCATIONAL_METHODICAL = "Навчально-методичний",
+  ORGANIZATIONAL_EDUCATIONAL = "Організаційно-виховний"
+}
+
 @Entity()
 export class Rating {
   @PrimaryGeneratedColumn()
   id: number;
-  
+
   @ManyToOne(() => User, (user) => user.ratingsAuthor)
   author: User;
-  
-  @Column()
-  type: string;
-  
-  @Column()
-  name: string;
 
-  @Column( {default: 'created', type: 'enum', enum: RatingStatus} )
+  @Column( {type: 'enum', enum: RatingType} )
+  type: RatingType;
+
+  @Column()
+  title: string;
+
+  @Column({ default: 'created', type: 'enum', enum: RatingStatus })
   status: RatingStatus;
 
-  @OneToMany(() => RatingParticipant, (participant) => participant.rating, { 
-    cascade: true, 
-    onDelete: 'CASCADE' 
+  @OneToMany(() => RatingParticipant, (participant) => participant.rating, {
+    cascade: true,
+    onDelete: 'CASCADE'
   })
   participants: RatingParticipant[];
 
-  @OneToMany(() => RatingItem, (item) => item.rating, { 
-    cascade: true, 
-    onDelete: 'CASCADE' 
+  @OneToMany(() => RatingItem, (item) => item.rating, {
+    cascade: true,
+    onDelete: 'CASCADE'
   })
   items: RatingItem[];
-  
+
   @ManyToMany(() => User)
   @JoinTable()
   reviewers: User[];

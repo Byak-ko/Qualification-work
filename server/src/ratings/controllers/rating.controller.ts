@@ -22,8 +22,25 @@ export class RatingController {
   })
   @ApiResponse({ status: 200, description: 'Список рейтингів' })
   @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
-  async getRatings() {
-    return this.ratingService.getRatings();
+  async getAllRatings() {
+    return this.ratingService.getAllRatings();
+  }
+
+  @Get('user')
+  @ApiOperation({
+    summary: 'Отримати всі рейтинги пов\'язані з користувачем',
+    description: 'Повертає рейтинги, де користувач є автором, учасником або перевіряючим'
+  })
+  @ApiResponse({ status: 200, description: 'Список рейтингів' })
+  @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
+  @ApiResponse({
+    status: 404,
+    description: 'Користувача не знайдено'
+  })
+  async getRatingsByUserId(@Req() req: Request) {
+    const user = req.user as any;
+    const userId = user.id;
+    return this.ratingService.getRatingsByUserId(userId);
   }
 
   @Post()
@@ -35,8 +52,8 @@ export class RatingController {
     description: 'Дані для створення нового рейтингу',
     type: CreateRatingDto,
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Рейтинг успішно створено',
     schema: {
       type: 'object',

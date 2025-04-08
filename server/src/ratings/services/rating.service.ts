@@ -40,10 +40,13 @@ export class RatingService {
     return this.ratingReviewService.reviewRating(ratingId, dto, userId);
   }
 
-  async getRatings() {
-    return this.ratingQueryService.getRatings();
+  async getAllRatings() {
+    return this.ratingQueryService.getAllRatings();
   }
 
+  async getRatingsByUserId(userId: number) {
+    return this.ratingQueryService.getRatingsByUserId(userId);
+  }
   async getRatingDetails(ratingId: number) {
     return this.ratingQueryService.getRatingDetails(ratingId);
   }

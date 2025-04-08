@@ -71,7 +71,7 @@ export class RatingCreationService {
     const allReviewers = [author, ...departmentReviewers, ...unitReviewers];
 
     const rating = this.ratingRepository.create({
-      name: dto.name,
+      title: dto.title,
       type: dto.type,
       author,
       status: RatingStatus.CREATED,
@@ -236,7 +236,7 @@ export class RatingCreationService {
 
     const allReviewers = [author, ...departmentReviewers, ...unitReviewers];
 
-    rating.name = dto.name;
+    rating.title = dto.title;
     rating.type = dto.type;
     rating.author = author;
     rating.reviewers = allReviewers;

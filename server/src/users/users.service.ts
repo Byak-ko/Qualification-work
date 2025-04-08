@@ -37,7 +37,7 @@ export class UserService {
   }
 
   async create(dto: CreateUserDto) {
-    const { departmentId, email, degree, position, ...rest } = dto;
+    const { departmentId, email, degree, position, isAuthor, ...rest } = dto;
   
     const department = await this.departmentRepository.findOne({
       where: { id: departmentId },
@@ -52,6 +52,7 @@ export class UserService {
       email,
       password: hashedPassword,
       department,
+      isAuthor,
       degree: degree ?? Degree.NONE, 
       position: position ?? Position.LECTURER, 
     });
@@ -79,15 +80,12 @@ export class UserService {
       user.department = department;
     }
   
-    if (dto.password) {
-      user.password = await bcrypt.hash(dto.password, 10);
-    }
-  
     const { departmentId, password, ...rest } = dto;
     Object.assign(user, {
       ...rest,
       degree: dto.degree ?? user.degree,
       position: dto.position ?? user.position,
+      isAuthor: dto.isAuthor ?? user.isAuthor
     });
   
     return this.userRepository.save(user);

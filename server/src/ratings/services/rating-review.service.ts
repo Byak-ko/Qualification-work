@@ -37,7 +37,7 @@ export class RatingReviewService {
         //  throw new BadRequestException('Респондент ще не завершив заповнення рейтингу');
         //}
         return {
-            name: participant.rating.name,
+            name: participant.rating.title,
             type: participant.rating.type,
             participantId: participant.id,
             respondent: {

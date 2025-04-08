@@ -23,23 +23,42 @@ export class RatingResponseService {
   async getRatingForRespondent(ratingId: number, userId: number) {
     const participant = await this.ratingParticipantRepository.findOne({
       where: { rating: { id: ratingId }, respondent: { id: userId } },
-      relations: ['rating', 'rating.items'],
+      relations: [
+        'rating', 
+        'rating.items', 
+        'responses', 
+        'responses.item', 
+        'responses.documents'
+      ],
     });
-
+    
     if (!participant) {
       throw new ForbiddenException('Ви не є респондентом цього рейтингу');
     }
-
+    
+    const responsesByItemId = participant.responses.reduce((map, response) => {
+      map[response.item.id] = response;
+      return map;
+    }, {});
+    
     return {
       id: participant.rating.id,
-      name: participant.rating.name,
+      title: participant.rating.title,
       type: participant.rating.type,
-      items: participant.rating.items.map(item => ({
-        id: item.id,
-        name: item.name,
-        maxScore: item.maxScore,
-        comment: item.comment,
-      })),
+      participantId: participant.id,
+      participantStatus: participant.status,
+      items: participant.rating.items.map(item => {
+        const response = responsesByItemId[item.id];
+        return {
+          id: item.id,
+          name: item.name,
+          maxScore: item.maxScore,
+          comment: item.comment,
+          isDocNeed: item.isDocNeed,
+          score: response ? response.score : 0,
+          documentUrls: response?.documents?.map(doc => doc.url) || []
+        };
+      }),
     };
   }
 

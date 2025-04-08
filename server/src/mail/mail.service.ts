@@ -53,12 +53,12 @@ export class MailService {
         });
         continue;
       }
-      const subject = `Призначено новий рейтинг: ${rating.name}`;
+      const subject = `Призначено новий рейтинг: ${rating.title}`;
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Вам призначено новий рейтинг</h2>
           <p>Шановний(а) ${respondent.firstName || 'користувач'},</p>
-          <p>Вам призначено новий рейтинг для заповнення: <strong>${rating.name}</strong></p>
+          <p>Вам призначено новий рейтинг для заповнення: <strong>${rating.title}</strong></p>
           <p>Тип рейтингу: ${rating.type}</p>
           <p>Автор рейтингу: ${rating.author?.firstName || 'Адміністратор'}</p>
          
@@ -122,12 +122,12 @@ export class MailService {
 
     const respondent = participant.respondent;
 
-    const subject = `Рейтинг заповнено: ${participant.rating.name}`;
+    const subject = `Рейтинг заповнено: ${participant.rating.title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Заповнено рейтинг, що потребує перевірки</h2>
         <p>Шановний(а) ${reviewer.firstName || 'перевіряючий'},</p>
-        <p>Користувач ${respondent?.firstName || `ID: ${respondent?.id || 'невідомий'}`} заповнив рейтинг <strong>${participant.rating.name}</strong>, який очікує вашої перевірки.</p>
+        <p>Користувач ${respondent?.firstName || `ID: ${respondent?.id || 'невідомий'}`} заповнив рейтинг <strong>${participant.rating.title}</strong>, який очікує вашої перевірки.</p>
         <p>Ви отримали це повідомлення як перевіряючий ${reviewerType}.</p>
         
         <div style="margin-top: 20px; text-align: center;">
@@ -163,12 +163,12 @@ export class MailService {
 
   async sendNextReviewerNotification(participant: RatingParticipant, nextReviewer: User): Promise<{ success: boolean; message: string }> {
 
-    const subject = `Рейтинг очікує вашої перевірки: ${participant.rating.name}`;
+    const subject = `Рейтинг очікує вашої перевірки: ${participant.rating.title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Рейтинг очікує вашої перевірки</h2>
         <p>Шановний(а) ${nextReviewer.firstName || 'перевіряючий'},</p>
-        <p>Рейтинг <strong>${participant.rating.name}</strong> користувача ${participant.respondent.firstName || ''} ${participant.respondent.lastName || ''} 
+        <p>Рейтинг <strong>${participant.rating.title}</strong> користувача ${participant.respondent.firstName || ''} ${participant.respondent.lastName || ''} 
            був схвалений попереднім перевіряючим та очікує вашої перевірки як перевіряючого.</p>
         
         <div style="margin-top: 20px; text-align: center;">
@@ -203,12 +203,12 @@ export class MailService {
   }
 
   async sendRatingApprovedNotification(participant: RatingParticipant): Promise<{ success: boolean; message: string }> {
-    const subject = `Ваш рейтинг затверджено: ${participant.rating.name}`;
+    const subject = `Ваш рейтинг затверджено: ${participant.rating.title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Ваш рейтинг затверджено</h2>
         <p>Шановний(а) ${participant.respondent.firstName || 'користувач'},</p>
-        <p>Ваш рейтинг <strong>${participant.rating.name}</strong> успішно пройшов усі рівні перевірки та був затверджений.</p>
+        <p>Ваш рейтинг <strong>${participant.rating.title}</strong> успішно пройшов усі рівні перевірки та був затверджений.</p>
         <p>Дякуємо за вашу роботу!</p>
         
         <div style="margin-top: 20px; text-align: center;">
@@ -243,12 +243,12 @@ export class MailService {
   }
 
   async sendRevisionRequiredNotification(participant: RatingParticipant, reviewer: User): Promise<{ success: boolean; message: string }> {
-    const subject = `Рейтинг повернено на доопрацювання: ${participant.rating.name}`;
+    const subject = `Рейтинг повернено на доопрацювання: ${participant.rating.title}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Рейтинг повернено на доопрацювання</h2>
         <p>Шановний(а) ${participant.respondent.firstName || 'користувач'},</p>
-        <p>Ваш рейтинг <strong>${participant.rating.name}</strong> був повернутий на доопрацювання 
+        <p>Ваш рейтинг <strong>${participant.rating.title}</strong> був повернутий на доопрацювання 
            рецензентом ${reviewer.firstName || ''} ${reviewer.lastName || ''}.</p>
         
         <p>Будь ласка, внесіть необхідні зміни та відправте рейтинг на повторну перевірку.</p>

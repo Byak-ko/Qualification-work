@@ -6,18 +6,20 @@ import {
   ArrayMinSize, 
   IsNumber, 
   IsOptional,
-  IsBoolean
+  IsBoolean,
+  IsEnum
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { RatingType } from 'src/entities/rating.entity';
 
 export class CreateRatingDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  title: string;
 
-  @IsString()
+  @IsEnum(RatingType)
   @IsNotEmpty()
-  type: string;
+  type: RatingType;
 
   @IsArray()
   @ArrayMinSize(1)

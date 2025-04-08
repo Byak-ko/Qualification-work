@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, IsNumber, MinLength, IsNotEmpty } from 'class-validator'
+import { IsEmail, IsEnum, IsOptional, IsString, IsNumber, MinLength, IsNotEmpty, IsBoolean } from 'class-validator'
 import { UserRole, Position, Degree } from 'src/entities/user.entity'
 import { Transform } from 'class-transformer';
 export class UpdateUserDto {
@@ -24,6 +24,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role: UserRole;
+
+  @IsOptional()
+  @IsBoolean()
+  isAuthor: boolean;
 
   @IsOptional()
   @Transform(({ value }) => (value in Degree ? Degree[value] : value))

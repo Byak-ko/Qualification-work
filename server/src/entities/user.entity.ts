@@ -53,6 +53,9 @@ export class User {
   @Column({ default: Position.LECTURER, type: 'enum', enum: Position })
   position: Position;
 
+  @Column({ default: false })
+  isAuthor: boolean;
+
   @ManyToOne(() => Department, (department) => department.users)
   department: Department;
 

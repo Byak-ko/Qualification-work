@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, IsNumber, MinLength } from 'class-validator'
+import { IsEmail, IsEnum, IsNotEmpty, IsString, IsNumber, MinLength, IsBoolean } from 'class-validator'
 import { UserRole, Degree, Position } from 'src/entities/user.entity'
 import { Transform } from 'class-transformer';
 
@@ -10,6 +10,10 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'Прізвище не може бути пустим' })
   @IsString()
   lastName: string;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  isAuthor: boolean;
 
   @IsEmail({}, { message: 'Некоректний email' })
   email: string;
