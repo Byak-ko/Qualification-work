@@ -55,12 +55,6 @@ const HomePage = () => {
               to="/users"
             />
             <HomeCard
-              title="Рейтинги"
-              description="Створюйте та редагуйте рейтинги викладачів."
-              icon={<ClipboardDocumentIcon className="w-10 h-10 text-blue-500" />}
-              to="/ratings"
-            />
-            <HomeCard
               title="Підрозділи"
               description="Налаштування факультетів та кафедр."
               icon={<BuildingOfficeIcon className="w-10 h-10 text-purple-500" />}
@@ -79,6 +73,12 @@ const HomePage = () => {
           description="Створюйте та редагуйте рейтинги викладачів."
           icon={<ClipboardDocumentIcon className="w-10 h-10 text-blue-500" />}
           to="/ratings"
+        />
+        <HomeCard
+          title="Звітність"
+          description="Перегляньте аналітику та звіти по рейтингах."
+          icon={<ChartBarIcon className="w-10 h-10 text-red-500" />}
+          to="/reports"
         />
       </div>
     </div>
