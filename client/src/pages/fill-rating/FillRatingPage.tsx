@@ -25,6 +25,7 @@ export default function RespondentRatingPage() {
       .get(`/ratings/${id}/respondent`)
       .then((res) => {
         const data = res.data;
+        console.log(data);
         const itemsWithDefaults = data.items.map((item: any) => {
           return {
             ...item,
@@ -40,36 +41,43 @@ export default function RespondentRatingPage() {
           fetchReviewerComments(data.participantId);
         }
       })
-      .catch(() => toast.error('Не вдалося завантажити рейтинг'))
+      .catch((error) => {
+        const errorMessage = error.response?.data?.message 
+          || error.message 
+          || 'Не вдалося завантажити рейтинг';
+        toast.error(errorMessage);
+
+        if (error.response?.status === 403) {
+          navigate('/ratings');
+        }
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
   const fetchReviewerComments = async (participantId: number) => {
     try {
       const res = await api.get(`/ratings/participants/${participantId}/approvals`);
+      console.log('Approvals:', res.data);
       const approvals = res.data;
 
-      const authorComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.AUTHOR)?.comments || {};
-      const unitComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.UNIT)?.comments || {};
-      const departmentComments = approvals.find((a: any) => a.reviewLevel === ReviewLevel.DEPARTMENT)?.comments || {};
+      // Define reviewer levels priority (from highest to lowest)
+      const reviewerLevels = [
+        ReviewLevel.DEPARTMENT,
+        ReviewLevel.UNIT,
+        ReviewLevel.AUTHOR
+      ];
 
-      const mergedComments: Record<number, string> = {};
+      // Find the highest level reviewer that has comments
+      const highestReviewerApproval = reviewerLevels
+        .map(level => approvals.find((a: any) => 
+          a.reviewLevel === level && 
+          a.comments && 
+          Object.keys(a.comments).length > 0
+        ))
+        .find(approval => approval !== undefined);
 
-      if (rating) {
-        rating.items.forEach(item => {
-          const itemId = item.id;
-
-          if (authorComments[itemId]) {
-            mergedComments[itemId] = authorComments[itemId];
-          } else if (unitComments[itemId]) {
-            mergedComments[itemId] = unitComments[itemId];
-          } else if (departmentComments[itemId]) {
-            mergedComments[itemId] = departmentComments[itemId];
-          }
-        });
-      }
-
-      setReviewerComments(mergedComments);
+      console.log('Highest reviewer approval:', highestReviewerApproval);
+      setReviewerComments(highestReviewerApproval?.comments || null);
     } catch (error) {
       console.error('Помилка завантаження коментарів:', error);
     }
@@ -105,9 +113,9 @@ export default function RespondentRatingPage() {
     setRating((prev) => {
       if (!prev) return prev;
       const updatedItems = [...prev.items];
-      updatedItems[itemIndex].documents = updatedItems[itemIndex].documents.filter(
-        (_, i) => i !== fileIndex
-      );
+      const updatedFiles = [...updatedItems[itemIndex].documents];
+      updatedFiles.splice(fileIndex, 1);
+      updatedItems[itemIndex].documents = updatedFiles;
       return { ...prev, items: updatedItems };
     });
   };
@@ -117,44 +125,53 @@ export default function RespondentRatingPage() {
       if (!prev) return prev;
       const updatedItems = [...prev.items];
       
-      if (updatedItems[itemIndex].documentUrls) {
-        updatedItems[itemIndex].documentUrls = updatedItems[itemIndex].documentUrls.filter(
-          (_, i) => i !== urlIndex
-        );
+      if (!updatedItems[itemIndex].documentUrls) {
+        return prev;
       }
       
+      const updatedUrls = [...updatedItems[itemIndex].documentUrls];
+      updatedUrls.splice(urlIndex, 1);
+      updatedItems[itemIndex].documentUrls = updatedUrls;
       return { ...prev, items: updatedItems };
     });
   };
 
   const handlePreview = () => {
     if (!rating) return;
-  
-    const isValidScores = rating.items.every(
-      (item) => {
-        const score = item.score;
-        return score >= 0 && (item.maxScore === 0 || score <= item.maxScore);
-      }
-    );
-  
-    const isValidFiles = rating.items.every(
-      (item) => 
-        !item.isDocNeed || 
-        item.score === 0 || 
-        item.documents.length > 0 || 
-        (item.documentUrls && item.documentUrls.length > 0)
-    );
-  
-    if (!isValidScores) {
-      toast.error('Перевірте правильність введених балів');
+
+    // Check if all required documents are provided
+    const missingDocs = rating.items.filter(item => {
+      return (
+        item.isDocNeed && 
+        item.score > 0 && 
+        (!item.documents || item.documents.length === 0) && 
+        (!item.documentUrls || item.documentUrls.length === 0)
+      );
+    });
+
+    if (missingDocs.length > 0) {
+      toast.error(
+        `Необхідно завантажити документи для наступних критеріїв: ${missingDocs
+          .map(item => item.name)
+          .join(', ')}`
+      );
       return;
     }
-  
-    if (!isValidFiles) {
-      toast.error('Деякі критерії вимагають підтверджуючих документів');
+
+    // Check if all scores are within valid range
+    const invalidScores = rating.items.filter(item => {
+      return item.score < 0 || (item.maxScore > 0 && item.score > item.maxScore);
+    });
+
+    if (invalidScores.length > 0) {
+      toast.error(
+        `Некоректні бали для наступних критеріїв: ${invalidScores
+          .map(item => item.name)
+          .join(', ')}`
+      );
       return;
     }
-  
+
     setShowPreview(true);
   };
 
@@ -170,35 +187,47 @@ export default function RespondentRatingPage() {
     setSubmitting(true);
 
     try {
-      const uploadedDocs: Record<number, string[]> = {};
+      // Create an array for the items to submit
+      const itemsToSubmit = [];
 
+      // Process each rating item
       for (const item of rating.items) {
-        const urls: string[] = [];
+        // Start with any existing document URLs
+        const documentUrls = [...(item.documentUrls || [])];
 
-        if (item.documentUrls) {
-          urls.push(...item.documentUrls);
-        }
-
+        // Upload any new documents and add their URLs
         for (const file of item.documents) {
-          const url = await uploadDocument(file);
-          urls.push(url);
+          try {
+            const url = await uploadDocument(file);
+            documentUrls.push(url);
+          } catch (error) {
+            console.error(`Error uploading file ${file.name}:`, error);
+            toast.error(`Помилка завантаження файлу ${file.name}`);
+            setSubmitting(false);
+            return;
+          }
         }
 
-        uploadedDocs[item.id] = urls;
+        // Add this item to the submission data
+        itemsToSubmit.push({
+          id: item.id,
+          score: item.score || 0,
+          documents: documentUrls,
+        });
       }
 
-      await api.post(`/ratings/${id}/respondent-fill`, {
-        items: rating.items.map((item) => ({
-          id: item.id,
-          score: item.score,
-          documents: uploadedDocs[item.id] || [],
-        })),
+      // Send the data to the server
+      const response = await api.post(`/ratings/${id}/respondent-fill`, {
+        items: itemsToSubmit,
       });
 
+      console.log('Server response:', response.data);
       toast.success('Рейтинг успішно заповнено');
       navigate('/ratings');
-    } catch (err) {
-      toast.error('Помилка при відправленні');
+    } catch (err: any) {
+      console.error('Error submitting rating:', err?.response?.data || err);
+      const errorMessage = err.response?.data?.message || err.message || 'Помилка при відправленні';
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -208,18 +237,17 @@ export default function RespondentRatingPage() {
     if (!rating) return 0;
     
     return rating.items.filter(item => {
-      // Критерій вважається заповненим, якщо:
-      // 1. Він має бал = 0 (не нараховано балів)
-      // 2. Або документи не обов'язкові і вказано бал
-      // 3. Або документи обов'язкові, вказано бал і завантажено документи (нові або старі)
-      return (
-        item.score === 0 || 
-        (!item.isDocNeed && item.score > 0) || 
-        (item.isDocNeed && item.score > 0 && (
-          item.documents.length > 0 || 
-          (item.documentUrls && item.documentUrls.length > 0)
-        ))
-      );
+      // For items that require documents
+      if (item.isDocNeed) {
+        return (
+          item.score > 0 && 
+          ((item.documents && item.documents.length > 0) || 
+           (item.documentUrls && item.documentUrls.length > 0))
+        );
+      }
+      
+      // For items that don't require documents
+      return item.score > 0;
     }).length;
   };
 
