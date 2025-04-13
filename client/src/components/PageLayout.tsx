@@ -52,6 +52,7 @@ const PageLayout = () => {
   [
     { label: "Головна", path: "/", icon: HomeIcon },
     { label: "Рейтинги", path: "/ratings", icon: ChartBarIcon },
+    { label: "Звіти", path: "/reports", icon: DocumentTextIcon },
     { label: "Мій кабінет", path: "/profile", icon: UserIcon },
   ]
 
@@ -60,9 +61,7 @@ const PageLayout = () => {
         { label: "Користувачі", path: "/users", icon: UsersIcon },
         { label: "Підрозділи", path: "/units", icon: BuildingOfficeIcon },
       ]
-    : [
-        { label: "Мої звіти", path: "/reports", icon: DocumentTextIcon },
-      ]
+    : []
 
   const menuItems = [...baseMenu, ...roleMenu]
 
