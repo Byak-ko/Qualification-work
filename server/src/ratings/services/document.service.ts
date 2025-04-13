@@ -3,6 +3,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { File } from 'multer';
 import { Document } from 'src/entities/document.entity';
+import { Rating, RatingStatus } from 'src/entities/rating.entity';
+import { RatingResponse } from 'src/entities/rating-response.entity';
 import * as path from 'path';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +26,10 @@ export const fileFilter = (req: any, file: File, callback: any) => {
 export class DocumentService {
   constructor(
     @InjectRepository(Document) private documentRepository: Repository<Document>,
+    @InjectRepository(Rating)
+    private ratingRepository: Repository<Rating>,
+    @InjectRepository(RatingResponse)
+    private ratingResponseRepository: Repository<RatingResponse>,
   ) { }
 
   async uploadDocument(file: File) {
@@ -67,5 +73,42 @@ export class DocumentService {
       throw new NotFoundException('Документ не знайдено');
     }
     return document;
+  }
+
+  async deleteAllRatingDocuments(ratingId: number): Promise<{ success: boolean; message: string }> {
+
+    const rating = await this.ratingRepository.findOne({
+      where: { id: ratingId },
+      select: ['id', 'status'],
+    });
+
+    if (!rating) {
+      throw new NotFoundException(`Рейтинг з ID ${ratingId} не знайдено`);
+    }
+
+    if (rating.status !== RatingStatus.CLOSED) {
+      throw new Error(`Видалення документів можливе лише для закритих рейтингів`);
+    }
+
+    try {
+      const responses = await this.ratingResponseRepository.find({
+        where: { rating: { id: ratingId } },
+      });
+
+      const updatePromises = responses.map(async (response) => {
+        response.documents = {};
+        return this.ratingResponseRepository.save(response);
+      });
+
+      await Promise.all(updatePromises);
+
+      return {
+        success: true,
+        message: `Всі документи для рейтингу з ID ${ratingId} успішно видалено`,
+      };
+    } catch (error) {
+      console.error(`Помилка під час видалення документів рейтингу: ${error.message}`);
+      throw new Error(`Помилка під час видалення документів рейтингу: ${error.message}`);
+    }
   }
 }

@@ -1,6 +1,5 @@
 import {
-    Controller, Post, Get, Param, UseGuards, UseInterceptors, UploadedFile, 
-    BadRequestException, NotFoundException, Body
+    Controller, Post, Get, Param, UseGuards, UseInterceptors, UploadedFile, NotFoundException, Delete
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -68,5 +67,19 @@ export class DocumentController {
             throw new NotFoundException('Документ не знайдено');
         }
         return document;
+    }
+
+    @Delete(':id/documents')
+    @ApiOperation({ summary: 'Видалити всі документи рейтингу' })
+    @ApiResponse({
+      status: 200,
+      description: 'Документи успішно видалено',
+    })
+    @ApiResponse({
+      status: 404,
+      description: 'Рейтинг не знайдено',
+    })
+    async deleteAllRatingDocuments(@Param('id') id: number) {
+      return this.documentService.deleteAllRatingDocuments(id);
     }
 }
