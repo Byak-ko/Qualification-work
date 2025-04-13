@@ -13,13 +13,14 @@ import {
   LockClosedIcon,
   FunnelIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 import Button from '../components/ui/Button';
 import { useAuth } from '../components/AuthProvider';
 import SkeletonCard from '../components/ui/Skeleton';
 import { Rating, RatingApprovalStatus, RatingParticipantStatus } from '../types/Rating';
-import { getRatingsByUserId } from '../services/api/ratings';
+import { getRatingsByUserId, completeRating, finalizeRating, fillRespondentRating} from '../services/api/ratings';
 
 const RatingsPage: React.FC<{}> = ({ }) => {
   const navigate = useNavigate();
@@ -74,6 +75,32 @@ const RatingsPage: React.FC<{}> = ({ }) => {
 
   const handleReviewRating = (ratingId: number, respondentId: number) => {
     navigate(`/ratings/${ratingId}/review/${respondentId}`);
+  };
+
+  const handleFillRespondentRating = async (id: number) => {
+    try {
+      await fillRespondentRating(id);
+      await fetchRatings();
+    } catch (error) {
+      console.error('Error fill-send rating:', error);
+    }
+  };
+  const handleCompleteRating = async (id: number) => {
+    try {
+      await completeRating(id);
+      await fetchRatings();
+    } catch (error) {
+      console.error('Error complete rating:', error);
+    }
+  };
+
+  const handleFinalizeRating = async (id: number) => {
+    try {
+      await finalizeRating(id);
+      await fetchRatings();
+    } catch (error) {
+      console.error('Error finalizing rating:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -205,7 +232,7 @@ const RatingsPage: React.FC<{}> = ({ }) => {
             {rating.status === 'created' ? 'Рейтинг ще не затверджено' : 'Рейтинг закрито для заповнення'}
           </div>
         );
-      } else if (rating.participantStatus !== 'pending') {
+      } else if (rating.participantStatus !== 'pending' && rating.participantStatus !== 'revision') {
         return (
           <div className="flex items-center gap-2 mt-3 text-gray-500 text-sm">
             <CheckCircleIcon className="h-4 w-4 text-green-600" />
@@ -324,7 +351,7 @@ const RatingsPage: React.FC<{}> = ({ }) => {
                       </span>
                       <span className="text-sm text-gray-600 flex items-center">
                         <CalendarDaysIcon className="h-4 w-4 mr-1 text-gray-500" />
-                        {rating.date}
+                        {rating.endedAt ? new Date(rating.endedAt).toLocaleDateString('uk-UA', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'Не вказано'}
                       </span>
                       <span className="text-sm text-gray-600">
                         {rating.participants.length} респондентів
@@ -369,8 +396,8 @@ const RatingsPage: React.FC<{}> = ({ }) => {
                               variant="secondary"
                               size="sm"
                               className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm ${buttonStatus.disabled
-                                  ? 'opacity-60 cursor-not-allowed'
-                                  : 'hover:bg-indigo-50 hover:text-indigo-600'
+                                ? 'opacity-60 cursor-not-allowed'
+                                : 'hover:bg-indigo-50 hover:text-indigo-600'
                                 }`}
                               disabled={buttonStatus.disabled}
                               onClick={() => !buttonStatus.disabled && handleReviewRating(rating.id, participant.id)}
@@ -437,8 +464,8 @@ const RatingsPage: React.FC<{}> = ({ }) => {
       <div
         key={rating.id}
         className={`bg-white rounded-2xl shadow-sm p-6 transition-all hover:shadow-md border border-gray-100 ${(tabType === 'author' && rating.status !== 'created') ||
-            (tabType === 'respondent' && (rating.status !== 'pending' || rating.participantStatus !== 'pending'))
-            ? 'opacity-90' : ''
+          (tabType === 'respondent' && (rating.status !== 'pending' || (rating.participantStatus !== 'pending' && rating.participantStatus !== 'revision')))
+          ? 'opacity-90' : ''
           }`}
       >
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -449,8 +476,8 @@ const RatingsPage: React.FC<{}> = ({ }) => {
                 {getStatusLabel(rating.status)}
               </span>
               {tabType === 'respondent' && rating.participantStatus && (
-                <span className={`text-sm px-3 py-1.5 rounded-full font-medium ${rating.participantStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    rating.participantStatus === 'filled' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                <span className={`text-sm px-3 py-1.5 rounded-full font-medium ${rating.participantStatus === 'pending' || rating.participantStatus === 'revision' ? 'bg-yellow-100 text-yellow-800' :
+                  rating.participantStatus === 'filled' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
                   {getParticipantStatusLabel(rating.participantStatus)}
                 </span>
@@ -460,7 +487,7 @@ const RatingsPage: React.FC<{}> = ({ }) => {
               </span>
               <span className="text-sm text-gray-600 flex items-center">
                 <CalendarDaysIcon className="h-4 w-4 mr-1 text-gray-500" />
-                {rating.date}
+                {rating.endedAt ? new Date(rating.endedAt).toLocaleDateString('uk-UA', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'Не вказано'}
               </span>
             </div>
 
@@ -470,34 +497,76 @@ const RatingsPage: React.FC<{}> = ({ }) => {
 
           <div className="flex gap-2 mt-4 sm:mt-0">
             {tabType === 'author' && rating.status === 'created' && (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-indigo-50 transition-colors text-indigo-700"
+                  onClick={() => handleEditRating(rating.id)}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  <span>Редагувати</span>
+                </Button>
+                <Button
+                  variant="green"
+                  size="sm"
+                  onClick={() => handleCompleteRating(rating.id)}
+                  className="flex items-center gap-1"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  Затвердити
+                </Button>
+              </div>
+            )}
+            {tabType === 'author' && rating.status !== 'closed' && (
               <Button
-                variant="secondary"
+                variant="danger"
                 size="sm"
-                className="flex items-center gap-2 rounded-xl px-4 py-2 hover:bg-indigo-50 transition-colors text-indigo-700"
-                onClick={() => handleEditRating(rating.id)}
+                onClick={() => handleFinalizeRating(rating.id)}
+                className="flex items-center gap-1 bg-gradient-to-r from-green-600 to-green-500"
               >
-                <PencilIcon className="h-4 w-4" />
-                <span>Редагувати</span>
+                <CheckIcon className="h-4 w-4" />
+                Закрити рейтинг
               </Button>
             )}
+
 
             {tabType === 'respondent' && (
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={rating.status !== 'pending' || rating.participantStatus !== 'pending'}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 ${rating.status === 'pending' && rating.participantStatus === 'pending'
-                    ? 'hover:bg-indigo-600 hover:text-white bg-indigo-50 text-indigo-700 transition-colors'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                disabled={rating.status !== 'pending' || (rating.participantStatus !== 'pending' && rating.participantStatus !== 'revision')}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 ${rating.status === 'pending' && (rating.participantStatus === 'pending' || rating.participantStatus === 'revision')
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 onClick={() => {
-                  if (rating.status === 'pending' && rating.participantStatus === 'pending') {
+                  if (rating.status === 'pending' && (rating.participantStatus === 'pending' || rating.participantStatus === 'revision')) {
                     handleFillRating(rating.id);
                   }
                 }}
               >
                 <DocumentTextIcon className="h-4 w-4" />
                 <span>Заповнити</span>
+              </Button>
+            )}
+            {tabType === 'respondent' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={rating.participantStatus == 'filled'}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 ${rating.status === 'pending' && (rating.participantStatus === 'pending' || rating.participantStatus === 'revision')
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                onClick={() => {
+                  if (rating.status === 'pending' && (rating.participantStatus === 'pending' || rating.participantStatus === 'revision')) {
+                    handleFillRespondentRating(rating.id);
+                  }
+                }}
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                <span>Надіслати на перевірку</span>
               </Button>
             )}
           </div>
