@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import PageLayout from "../components/PageLayout";
 import HomePage from "../pages/home/HomePage";
 import AdminUsersPage from "../pages/user-managment/AdminUsersPage";
-import CreateRatingPage from "../pages/rating-create/CreateRatingPage";
+import CreateRatingPage from "../pages/rating-managment/CreateRatingPage";
 import ReportsPage from "../pages/ReportsPage";
 import LoginPage from "../pages/login/LoginPage";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -13,9 +13,9 @@ import FillRatingPage from "../pages/fill-rating/FillRatingPage";
 import UserProfilePage from "../pages/user-profile/UserProfilePage";
 import ReviewRatingPage from "../pages/rating-review/ReviewRatingPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
-import EditRatingPage from "../pages/rating-create/EditRatingPage";
+import EditRatingPage from "../pages/rating-managment/EditRatingPage";
 import RatingsPage from "../pages/RatingsPage";
-import DocumentViewerPage from "../pages/DocumentViewerPage";
+import ClosedRatingsPage from "../pages/RatingsClosed";
 
 
 export const router = createBrowserRouter([
@@ -44,6 +44,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={[Role.ADMIN]}>
             <UnitsDepartmentsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "ratings/documents",
+        element: (
+          <ProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <ClosedRatingsPage />
           </ProtectedRoute>
         ),
       },
@@ -104,14 +112,6 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "/documents/view",
-        element: (
-          <ProtectedRoute>
-            <DocumentViewerPage />
-          </ProtectedRoute>
-        ),
-      }
     ],
   },
   {
