@@ -8,6 +8,7 @@ import ReviewerSelector from "./ReviewerSelector";
 import { useAuth } from "../../components/AuthProvider";
 import RespondentSelector from "./RespondentSelector";
 import RatingItemsEditor from "./RatingItemsEditor";
+import DatePicker from "./DatePicker";
 import Input from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
 import { Rating, RatingItem, RatingType } from "../../types/Rating";
@@ -16,7 +17,8 @@ import {
   DocumentPlusIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
-  PlusCircleIcon
+  PlusCircleIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline';
 
 export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents"> & {
@@ -27,6 +29,7 @@ export type EditableRatingItem = Omit<RatingItem, "id" | "score" | "documents"> 
 export default function EditRatingPage() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("");
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedRespondentIds, setSelectedRespondentIds] = useState<number[]>([]);
   const [items, setItems] = useState<EditableRatingItem[]>([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +61,10 @@ export default function EditRatingPage() {
         setTitle(rating.title);
         setType(rating.type);
         setSelectedRespondentIds(rating.participants.map(({ respondent }) => respondent.id));
+
+        if (rating.endedAt) {
+          setEndDate(new Date(rating.endedAt));
+        }
 
         if (rating.departmentReviewers) {
           setDepartmentReviewerIds(rating.departmentReviewers.map((reviewer: User) => reviewer.id));
@@ -151,7 +158,7 @@ export default function EditRatingPage() {
 
     if (
       items.length === 0 ||
-      items.some((item) => !item.name.trim() || item.maxScore <= 0)
+      items.some((item) => !item.name.trim() || item.maxScore < 0)
     ) {
       toast.error("Додайте хоча б один валідний пункт рейтингу");
       return;
@@ -159,20 +166,19 @@ export default function EditRatingPage() {
 
     try {
       setIsSubmitting(true);
-      const reviewerDepartmentsIds = departmentReviewerIds;
-      const reviewerUnitsIds = unitReviewerIds;
       const payload = {
         title,
         type,
         respondentIds: selectedRespondentIds,
-        reviewerDepartmentsIds,
-        reviewerUnitsIds,
-        items
+        reviewerDepartmentsIds: departmentReviewerIds,
+        reviewerUnitsIds: unitReviewerIds,
+        items,
+        endedAt: endDate
       };
       console.log("PAYLOAD", payload);
       await api.patch(`/ratings/${id}`, payload);
       toast.success("Рейтинг успішно оновлено!");
-      navigate(`/ratings/${id}/fill`);
+      navigate(`/ratings`);
     } catch (err) {
       toast.error("Помилка оновлення рейтингу");
       console.error(err);
@@ -234,6 +240,20 @@ export default function EditRatingPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="w-full mt-4">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                      <CalendarIcon className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={(date) => setEndDate(date)}
+                      placeholder="Виберіть кінцеву дату"
+                      minDate={new Date()}
+                      label="Кінцева дата"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

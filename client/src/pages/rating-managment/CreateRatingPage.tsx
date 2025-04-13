@@ -8,6 +8,7 @@ import ReviewerSelector from "./ReviewerSelector";
 import { useAuth } from "../../components/AuthProvider";
 import RespondentSelector from "./RespondentSelector";
 import RatingItemsEditor from "./RatingItemsEditor";
+import DatePicker from "./DatePicker";
 import Input from "../../components/ui/Input";
 import {
   StarIcon,
@@ -15,6 +16,7 @@ import {
   UserGroupIcon,
   ClipboardDocumentListIcon,
   DocumentDuplicateIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline';
 import { RatingType } from "../../types/Rating";
 
@@ -33,6 +35,7 @@ interface RatingTemplate {
 export default function CreateRatingPage() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState("");
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedRespondentIds, setSelectedRespondentIds] = useState<number[]>([]);
   const [items, setItems] = useState([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +52,7 @@ export default function CreateRatingPage() {
 
   useEffect(() => {
     api.get("/users").then((res) => setAllUsers(res.data));
-    
+
     api.get("/ratings").then((res) => {
       const availableTemplates = res.data.map((rating: any) => ({
         id: rating.id,
@@ -83,17 +86,17 @@ export default function CreateRatingPage() {
 
   const handleTemplateChange = async (templateId: number | "") => {
     setSelectedTemplateId(templateId);
-    
+
     if (templateId === "") {
       setTitle("");
       setType("");
       setItems([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
       return;
     }
-    
+
     try {
       const selectedTemplate = templates.find(t => t.id === templateId);
-      
+
       if (selectedTemplate) {
         setTitle(selectedTemplate.title);
         setType(selectedTemplate.type);
@@ -146,7 +149,7 @@ export default function CreateRatingPage() {
 
     if (
       items.length === 0 ||
-      items.some((item) => !item.name.trim() || item.maxScore <= 0)
+      items.some((item) => !item.name.trim() || item.maxScore < 0)
     ) {
       toast.error("Додайте хоча б один валідний пункт рейтингу");
       return;
@@ -156,7 +159,7 @@ export default function CreateRatingPage() {
       setIsSubmitting(true);
       const reviewerDepartmentsIds = departmentReviewerIds;
       const reviewerUnitsIds = unitReviewerIds;
-      const payload = { title, type, respondentIds: selectedRespondentIds, reviewerDepartmentsIds, reviewerUnitsIds, items };
+      const payload = { title, type, respondentIds: selectedRespondentIds, reviewerDepartmentsIds, reviewerUnitsIds, items, endedAt: endDate };
       console.log(payload);
       await api.post("/ratings", payload);
       toast.success("Рейтинг успішно створено!");
@@ -189,7 +192,7 @@ export default function CreateRatingPage() {
               <DocumentDuplicateIcon className="w-6 h-6 mr-2" />
               <h2 className="text-xl font-bold">Тип створення</h2>
             </div>
-            
+
             <div className="flex items-center space-x-4 mb-4">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -206,7 +209,7 @@ export default function CreateRatingPage() {
                 />
                 <span className="text-gray-700">Новий рейтинг</span>
               </label>
-              
+
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="radio"
@@ -217,7 +220,7 @@ export default function CreateRatingPage() {
                 <span className="text-gray-700">За шаблоном</span>
               </label>
             </div>
-            
+
             {useTemplate && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -282,6 +285,24 @@ export default function CreateRatingPage() {
                   </select>
                 </div>
               </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Кінцева дата
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                    <CalendarIcon className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    placeholder="Виберіть кінцеву дату"
+                    minDate={new Date()} 
+                    label="Кінцева дата"
+                  />
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -311,15 +332,15 @@ export default function CreateRatingPage() {
             />
           </div>
 
-          {currentUser && selectedRespondentIds.length > 0 && (
-            <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
-              <div className="flex items-center text-blue-800 mb-4">
-                <UserGroupIcon className="w-6 h-6 mr-2" />
-                <h2 className="text-xl font-bold">Рецензенти</h2>
-                <span className="text-sm text-gray-500 ml-2">
-                  (максимум 1 особа з кожної кафедри та підрозділу респондентів)
-                </span>
-              </div>
+          <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-md">
+            <div className="flex items-center text-blue-800 mb-4">
+              <UserGroupIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-bold">Рецензенти</h2>
+              <span className="text-sm text-gray-500 ml-2">
+                (максимум 1 особа з кожної кафедри та підрозділу респондентів)
+              </span>
+            </div>
+            {currentUser && (
               <ReviewerSelector
                 allUsers={allUsers}
                 currentUser={currentUser}
@@ -329,8 +350,8 @@ export default function CreateRatingPage() {
                 setUnitReviewerIds={setUnitReviewerIds}
                 selectedRespondentIds={selectedRespondentIds}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="pt-4">
             <Button
