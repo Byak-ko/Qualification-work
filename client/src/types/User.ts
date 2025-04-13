@@ -19,6 +19,7 @@ export enum Position {
     DEAN_OR_DIRECTOR = 'Декан факультету / директор ННІ',
     VICE_RECTOR = 'Проректор',
     RECTOR = 'Ректор',
+    ADMIN = 'Адміністратор'
 }
 
 export type User = {

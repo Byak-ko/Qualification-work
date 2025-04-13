@@ -23,7 +23,7 @@ export type Rating = {
     unitReviewers?: User[];
     items: RatingItem[];
     participantStatus: RatingParticipantStatus;
-    date: string;
+    endedAt?: Date;
 };
 
 export type RatingItem = {
@@ -39,7 +39,7 @@ export type RatingItem = {
 
 export type RatingApproval = {
     ratingId: number;
-    comments: Record<string, unknown>;
+    comments: Record<number, string>;
     status: RatingApprovalStatus;
 };
 

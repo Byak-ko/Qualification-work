@@ -16,4 +16,27 @@ export const getRatingsByUserId = async () => {
   return response.data;
 };
 
+export const getAllRatings = async () => {
+  const response = await api.get(`/ratings`);
+  return response.data;
+}
 
+export const getClosedRatings = async () => {
+  const response = await api.get(`/ratings/closed`);
+  return response.data;
+}
+
+export const fillRespondentRating = async (ratingId: number) => {
+  const response = await api.post(`/ratings/${ratingId}/respondent-fill-send`);
+  return response.data;
+};
+
+export const completeRating = async (ratingId: number) => {
+  const response = await api.post(`/ratings/${ratingId}/complete`);
+  return response.data;
+};
+
+export const finalizeRating = async (ratingId: number) => {
+  const response = await api.post(`/ratings/${ratingId}/finalize`);
+  return response.data;
+};
