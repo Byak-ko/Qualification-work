@@ -18,7 +18,10 @@ import { RatingQueryService } from './services/rating-query.service'
 import { RatingResponseController } from './controllers/rating-response.controller'
 import { DocumentController } from './controllers/document.controller'
 import { RatingReviewController } from './controllers/rating-review.controller'
+import { RatingFinalizationController } from './controllers/rating-finalization.controller'
 import { DocumentService } from './services/document.service'
+import { RatingReportController } from './controllers/rating-report.controller'
+import { RatingReportService } from './services/rating-report.service'
 
 @Module({
   imports: [
@@ -32,8 +35,8 @@ import { DocumentService } from './services/document.service'
       Document,
     ]),
   ],
-  providers: [RatingService, MailService, RatingCreationService, RatingResponseService, RatingReviewService, RatingQueryService, DocumentService],
-  controllers: [RatingController, RatingResponseController, RatingReviewController, DocumentController],
+  providers: [RatingService, MailService, RatingCreationService, RatingResponseService, RatingReviewService, RatingReportService, RatingQueryService, DocumentService],
+  controllers: [RatingController, RatingResponseController, RatingReviewController, RatingReportController, RatingFinalizationController, DocumentController],
   exports: [RatingService,],
 })
 export class RatingsModule {}

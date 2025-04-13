@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Rating, RatingType, RatingStatus } from 'src/entities/rating.entity';
+import { Rating, RatingStatus } from 'src/entities/rating.entity';
 import { RatingParticipant, RatingParticipantStatus } from 'src/entities/rating-participant.entity';
 import { RatingApproval, RatingApprovalStatus } from 'src/entities/rating-approval.entity';
 import { User } from 'src/entities/user.entity';
-import { classToPlain, plainToInstance } from 'class-transformer';
+import { RatingApprovalCommentsDto } from '../dto/rating-approval.dto';
 
 @Injectable()
 export class RatingQueryService {
@@ -14,7 +14,7 @@ export class RatingQueryService {
     @InjectRepository(Rating) private ratingRepository: Repository<Rating>,
     @InjectRepository(RatingParticipant) private ratingParticipantRepository: Repository<RatingParticipant>,
     @InjectRepository(RatingApproval) private ratingApprovalRepository: Repository<RatingApproval>,
-  ) {}
+  ) { }
 
   async getRatingDetails(ratingId: number) {
     const rating = await this.ratingRepository.findOne({
@@ -23,7 +23,7 @@ export class RatingQueryService {
         'author',
         'reviewers',
         'reviewers.department',
-        'reviewers.department.unit',  
+        'reviewers.department.unit',
         'participants',
         'participants.respondent',
         'participants.departmentReviewer',
@@ -37,7 +37,7 @@ export class RatingQueryService {
     }
 
     // Використовуємо деструктуризацію та обробку даних напряму
-    const { id, title, type, author, reviewers, participants, items } = rating;
+    const { id, title, type, author, endedAt, reviewers, participants, items } = rating;
 
     // Створюємо списки рецензентів
     const departmentReviewerIds = new Set(
@@ -57,6 +57,7 @@ export class RatingQueryService {
       id,
       title,
       type,
+      endedAt,
       author: this.formatUser(author),
       reviewers: reviewers.map(reviewer => this.formatUser(reviewer)),
       departmentReviewers: reviewers
@@ -80,9 +81,9 @@ export class RatingQueryService {
       participants: participants.map(participant => ({
         id: participant.id,
         respondent: this.formatUser(participant.respondent),
-        departmentReviewer: participant.departmentReviewer ? 
+        departmentReviewer: participant.departmentReviewer ?
           this.formatUserBasic(participant.departmentReviewer) : null,
-        unitReviewer: participant.unitReviewer ? 
+        unitReviewer: participant.unitReviewer ?
           this.formatUserBasic(participant.unitReviewer) : null
       })),
       items: items.map(item => ({
@@ -96,11 +97,10 @@ export class RatingQueryService {
   }
 
   async getAllRatings() {
-    const ratings = await this.ratingRepository.find({ 
-      relations: ['author', 'participants', 'reviewers', 'items'] 
+    const ratings = await this.ratingRepository.find({
+      relations: ['author', 'participants', 'reviewers', 'items']
     });
-    
-    // Можна використати exclude transformer для виключення непотрібних полів
+
     return ratings;
   }
 
@@ -113,7 +113,7 @@ export class RatingQueryService {
     // Отримуємо рейтинги автора
     const ratingsAuthor = await this.ratingRepository.find({
       where: { author: { id: userId } },
-      select: { id: true, title: true, type: true, status: true },
+      select: { id: true, title: true, type: true, status: true, endedAt: true },
     });
 
     // Отримуємо участі в рейтингах
@@ -127,6 +127,7 @@ export class RatingQueryService {
       id: participation.rating.id,
       title: participation.rating.title,
       type: participation.rating.type,
+      endedAt: participation.rating.endedAt,
       status: participation.rating.status,
       participantStatus: participation.status,
     }));
@@ -141,16 +142,25 @@ export class RatingQueryService {
     };
   }
 
+  async getClosedRatings() {
+    const closedRatings = await this.ratingRepository.find({
+      where: { status: RatingStatus.CLOSED },
+      select: { id: true, title: true, type: true, endedAt: true },
+      order: { endedAt: 'DESC' }
+    });
+  
+    return closedRatings;
+  }
+
   private async getReviewerRatingsData(userId: number) {
-    // Оптимізований запит - отримуємо всіх учасників одразу
     const reviewParticipants = await this.ratingParticipantRepository
       .createQueryBuilder('participant')
       .innerJoinAndSelect('participant.rating', 'rating')
       .innerJoinAndSelect('participant.respondent', 'respondent')
       .leftJoinAndSelect('respondent.department', 'department')
-      .where('participant.departmentReviewer.id = :userId', { userId })
-      .orWhere('participant.unitReviewer.id = :userId', { userId })
-      .orWhere('participant.customerReviewer.id = :userId', { userId })
+      .where('(participant.departmentReviewer.id = :userId OR participant.unitReviewer.id = :userId OR participant.customerReviewer.id = :userId)',
+        { userId })
+      .andWhere('participant.status = :status', { status: RatingParticipantStatus.FILLED })
       .getMany();
 
     // Отримуємо всі статуси затверджень
@@ -167,7 +177,7 @@ export class RatingQueryService {
 
     // Групуємо за рейтингами
     const ratingsMap = new Map();
-    
+
     reviewParticipants.forEach(participant => {
       const { rating } = participant;
       if (!ratingsMap.has(rating.id)) {
@@ -176,16 +186,17 @@ export class RatingQueryService {
           title: rating.title,
           type: rating.type,
           status: rating.status,
+          endedAt: rating.endedAt,
           participants: []
         });
       }
-      
+
       // Додаємо учасника, якщо він ще не доданий
       const currentRating = ratingsMap.get(rating.id);
       const existingParticipant = currentRating.participants.find(
         p => p.id === participant.respondent.id
       );
-      
+
       if (!existingParticipant) {
         currentRating.participants.push({
           id: participant.respondent.id,
@@ -200,7 +211,7 @@ export class RatingQueryService {
         });
       }
     });
-    
+
     return Array.from(ratingsMap.values());
   }
 
@@ -220,5 +231,17 @@ export class RatingQueryService {
       firstName: user.firstName,
       lastName: user.lastName,
     };
+  }
+
+  async getParticipantApprovals(participantId: number): Promise<RatingApprovalCommentsDto[]> {
+    const approvals = await this.ratingApprovalRepository.find({
+      where: { participant: { id: participantId } },
+      relations: ['participant'],
+    });
+
+    return approvals.map(approval => ({
+      reviewLevel: approval.reviewLevel,
+      comments: approval.comments,
+    }));
   }
 }

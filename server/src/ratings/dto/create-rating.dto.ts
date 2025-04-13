@@ -7,9 +7,10 @@ import {
   IsNumber, 
   IsOptional,
   IsBoolean,
-  IsEnum
+  IsEnum,
+  IsDate
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { RatingType } from 'src/entities/rating.entity';
 
 export class CreateRatingDto {
@@ -36,6 +37,10 @@ export class CreateRatingDto {
   @IsArray()
   @IsOptional()
   reviewerIds?: number[];
+
+  @IsDate()
+  @Transform(({ value }) => new Date(value))
+  endedAt: Date;
 
   @IsArray()
   @ValidateNested({ each: true })

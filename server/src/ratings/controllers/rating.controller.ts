@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CreateRatingDto } from '../dto/create-rating.dto';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { RatingApprovalCommentsDto } from '../dto/rating-approval.dto';
 
 @ApiTags('ratings')
 @UseGuards(JwtAuthGuard)
@@ -41,6 +42,17 @@ export class RatingController {
     const user = req.user as any;
     const userId = user.id;
     return this.ratingService.getRatingsByUserId(userId);
+  }
+
+  @Get('closed')
+  @ApiOperation({
+    summary: 'Отримати закриті рейтинги',
+    description: 'Повертає список всіх закритих рейтингів у системі.',
+  })
+  @ApiResponse({ status: 200, description: 'Список закритих рейтингів' })
+  @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
+  async getClosedRatings() {
+    return this.ratingService.getClosedRatings();
   }
 
   @Post()
@@ -134,5 +146,17 @@ export class RatingController {
       }
       throw error;
     }
+  }
+
+  @Get('participants/:participantId/approvals')
+  async getParticipantApprovals(
+    @Param('participantId', ParseIntPipe) participantId: number,
+  ): Promise<RatingApprovalCommentsDto[]> {
+    return this.ratingService.getParticipantApprovals(participantId);
+  }
+
+  @Post(':id/complete')
+  async completeRating(@Param('id', ParseIntPipe) id: number) {
+    return this.ratingService.completeRating(id);
   }
 }

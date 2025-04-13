@@ -9,6 +9,7 @@ import { RatingParticipantStatus } from 'src/entities/rating-participant.entity'
 import { FillRatingDto } from '../dto/fill-rating.dto';
 import { RatingApproval, RatingApprovalStatus, ReviewLevel } from 'src/entities/rating-approval.entity';
 import { User } from 'src/entities/user.entity';
+import { RatingStatus } from 'src/entities/rating.entity';
 
 @Injectable()
 export class RatingResponseService {
@@ -27,19 +28,41 @@ export class RatingResponseService {
         'rating', 
         'rating.items', 
         'responses', 
-        'responses.item', 
-        'responses.documents'
+        'responses.respondent'
       ],
     });
     
+    console.log("Rating status:", participant?.rating?.status);
+    console.log("Participant status:", participant?.status);
+
     if (!participant) {
       throw new ForbiddenException('Ви не є респондентом цього рейтингу');
     }
+
+    if (participant.status === RatingParticipantStatus.FILLED) {
+      throw new ForbiddenException('Ви вже заповнили цей рейтинг');
+    }
+
+    if (participant.status === RatingParticipantStatus.APPROVED) {
+      throw new ForbiddenException('Рейтинг вже підтверджений');
+    }
+
+    if (participant.rating.status === RatingStatus.CREATED) {
+      throw new ForbiddenException('Рейтинг вже відхилено');
+    }
+
+    if (participant.rating.status === RatingStatus.CLOSED) {
+      throw new ForbiddenException('Рейтинг вже закритий');
+    }
+
+    // Find the response for this participant
+    const response = participant.responses.find(
+      response => response.respondent && response.respondent.id === userId
+    );
     
-    const responsesByItemId = participant.responses.reduce((map, response) => {
-      map[response.item.id] = response;
-      return map;
-    }, {});
+    // Get scores and documents from the response or initialize empty objects
+    const scores = response?.scores || {};
+    const documents = response?.documents || {};
     
     return {
       id: participant.rating.id,
@@ -48,15 +71,14 @@ export class RatingResponseService {
       participantId: participant.id,
       participantStatus: participant.status,
       items: participant.rating.items.map(item => {
-        const response = responsesByItemId[item.id];
         return {
           id: item.id,
           name: item.name,
           maxScore: item.maxScore,
           comment: item.comment,
           isDocNeed: item.isDocNeed,
-          score: response ? response.score : 0,
-          documentUrls: response?.documents?.map(doc => doc.url) || []
+          score: scores[item.id] || 0,
+          documentUrls: documents[item.id] || []
         };
       }),
     };
@@ -73,7 +95,9 @@ export class RatingResponseService {
         'unitReviewer',
         'respondent',
         'approvals',
-        'approvals.reviewer'
+        'approvals.reviewer',
+        'responses',
+        'responses.respondent'
       ],
     });
 
@@ -81,36 +105,66 @@ export class RatingResponseService {
       throw new ForbiddenException('Ви не є респондентом цього рейтингу');
     }
 
-    for (const item of dto.items) {
-      let response = await this.ratingResponseRepository.findOne({
-        where: { item: { id: item.id }, respondent: { id: userId } },
-        relations: ['documents'],
+    // Find existing response or create a new one
+    let response = participant.responses.find(
+      response => response.respondent && response.respondent.id === userId
+    );
+
+    if (!response) {
+      response = this.ratingResponseRepository.create({
+        respondent: { id: userId },
+        rating: { id: ratingId },
+        participant: participant,
+        scores: {},
+        documents: {}
       });
+    }
 
-      if (!response) {
-        response = this.ratingResponseRepository.create({
-          item: { id: item.id },
-          respondent: { id: userId },
-          score: item.score,
-          participant: participant,
-        });
-      } else {
-        response.score = item.score;
-      }
+    // Initialize or update scores and documents
+    const scores: Record<number, number> = response.scores || {};
+    const documents: Record<number, string[]> = response.documents || {};
 
-      const documentEntities = await Promise.all(
-        item.documents.map(async (url) => {
-          let document = await this.documentRepository.findOne({ where: { url } });
-          if (!document) {
-            document = this.documentRepository.create({ url });
-            await this.documentRepository.save(document);
-          }
-          return document;
-        })
-      );
+    // Process each item in the DTO
+    for (const item of dto.items) {
+      // Update score for this item
+      scores[item.id] = item.score;
+      
+      // Update documents for this item
+      documents[item.id] = item.documents;
+    }
 
-      response.documents = documentEntities;
-      await this.ratingResponseRepository.save(response);
+    // Update the response with new data
+    response.scores = scores;
+    response.documents = documents;
+    
+    // Save the response
+    await this.ratingResponseRepository.save(response);
+
+    return {
+      message: 'Рейтинг успішно заповнено',
+    };
+  }
+
+  async fillRespondentRating(ratingId: number, userId: number) {
+
+    const participant = await this.ratingParticipantRepository.findOne({
+      where: { rating: { id: ratingId }, respondent: { id: userId } },
+      relations: [
+        'rating',
+        'rating.items',
+        'rating.author',
+        'departmentReviewer',
+        'unitReviewer',
+        'respondent',
+        'approvals',
+        'approvals.reviewer',
+        'responses',
+        'responses.respondent'
+      ],
+    });
+
+    if (!participant) {
+      throw new ForbiddenException('Ви не є респондентом цього рейтингу');
     }
 
     let reviewer: User | undefined = undefined;

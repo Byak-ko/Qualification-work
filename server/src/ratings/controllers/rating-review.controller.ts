@@ -71,11 +71,11 @@ export class RatingReviewController {
     @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
     @ApiResponse({ status: 404, description: 'Рейтинг або відповідь не знайдено' })
     async reviewRating(
-        @Param('id', ParseIntPipe) id: number,
+        @Param('ratingId', ParseIntPipe) ratingId: number,
         @Body() dto: RatingApprovalDto,
         @Req() req: Request,
     ) {
         const userId = req.user.id
-        return this.ratingService.reviewRating(id, dto, userId);
+        return this.ratingService.reviewRating(ratingId, dto, userId);
     }
 }

@@ -91,4 +91,13 @@ export class RatingResponseController {
         const userId = req.user.id;
         return this.ratingService.fillRating(ratingId, userId, dto);
     }
+
+    @Post(':id/respondent-fill-send')
+    async fillRespondentRating(
+        @Param('id', ParseIntPipe) ratingId: number,
+        @Req() req: Request,
+    ) {
+        const userId = req.user.id;
+        return this.ratingService.fillRespondentRating(ratingId, userId);
+    }
 }

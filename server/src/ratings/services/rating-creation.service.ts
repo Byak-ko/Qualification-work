@@ -76,6 +76,7 @@ export class RatingCreationService {
       author,
       status: RatingStatus.CREATED,
       reviewers: allReviewers,
+      endedAt: dto.endedAt, 
     });
     await this.ratingRepository.save(rating);
 
@@ -104,7 +105,6 @@ export class RatingCreationService {
           participant.departmentReviewer = matchedDepartmentReviewer;
         }
       }
-
       if (respondent.department?.unit.id && unitReviewers.length > 0) {
         const matchedUnitReviewer = reviewersByUnit[respondent.department.unit.id];
         if (matchedUnitReviewer) {
@@ -119,17 +119,16 @@ export class RatingCreationService {
 
     await this.ratingParticipantRepository.save(participants);
 
+    // Create one response per participant with empty scores and documents
     for (const participant of participants) {
-      const responses = ratingItems.map((item) =>
-        this.ratingResponseRepository.create({
-          rating,
-          item,
-          respondent: participant.respondent,
-          participant,
-          score: 0,
-        }),
-      );
-      await this.ratingResponseRepository.save(responses);
+      const response = this.ratingResponseRepository.create({
+        rating,
+        respondent: participant.respondent,
+        participant,
+        scores: {},
+        documents: {}
+      });
+      await this.ratingResponseRepository.save(response);
     }
 
     const allApprovals: RatingApproval[] = [];
@@ -173,24 +172,28 @@ export class RatingCreationService {
       await this.ratingApprovalRepository.save(allApprovals);
     }
 
-    return { rating, ratingItems, participants, respondents };
+    try {
+      await this.mailService.sendRatingNotification(rating, respondents);
+      console.log('Повідомлення успішно відправлені');
+    } catch (error) {
+      console.error('Помилка відправки повідомлень:', error);
+    }
+
+    return rating;
   }
 
   async editRating(ratingId: number, authorId: number, dto: CreateRatingDto) {
     const rating = await this.ratingRepository.findOne({
       where: { id: ratingId },
-      relations: [
-        'items',
-        'participants',
-        'participants.responses',
-        'participants.approvals',
-        'participants.respondent',
-        'reviewers'
-      ]
+      relations: ['items', 'participants', 'participants.responses', 'author']
     });
 
     if (!rating) {
       throw new NotFoundException('Рейтинг не знайдений');
+    }
+
+    if (rating.author.id !== authorId) {
+      throw new BadRequestException('Ви не є автором цього рейтингу');
     }
 
     const author = await this.userRepository.findOne({ where: { id: authorId } });
@@ -240,7 +243,7 @@ export class RatingCreationService {
     rating.type = dto.type;
     rating.author = author;
     rating.reviewers = allReviewers;
-    rating.status = RatingStatus.PENDING;
+    rating.endedAt = dto.endedAt;
 
     await this.dataSource.transaction(async manager => {
       await manager.save(rating);
@@ -261,6 +264,12 @@ export class RatingCreationService {
       await manager.save(ratingItems);
 
       if (rating.participants?.length) {
+        // Remove old responses first
+        for (const participant of rating.participants) {
+          if (participant.responses?.length) {
+            await manager.remove(participant.responses);
+          }
+        }
         await manager.remove(rating.participants);
       }
 
@@ -292,17 +301,16 @@ export class RatingCreationService {
 
       await manager.save(participants);
 
+      // Create one response per participant with empty scores and documents
       for (const participant of participants) {
-        const responses = ratingItems.map((item) =>
-          this.ratingResponseRepository.create({
-            rating,
-            item,
-            respondent: participant.respondent,
-            participant,
-            score: 0,
-          }),
-        );
-        await manager.save(responses);
+        const response = this.ratingResponseRepository.create({
+          rating,
+          respondent: participant.respondent,
+          participant,
+          scores: {},
+          documents: {}
+        });
+        await manager.save(response);
       }
 
       const allApprovals: RatingApproval[] = [];
@@ -352,15 +360,55 @@ export class RatingCreationService {
       relations: ['items', 'participants', 'participants.respondent', 'author']
     });
 
-    /*if (updatedRating) {
+    return updatedRating;
+  }
+
+  async completeRating(ratingId: number) {
+    const rating = await this.ratingRepository.findOne({
+      where: { id: ratingId },
+      relations: ['items', 'participants', 'participants.respondent', 'author']
+    });
+
+    if (!rating) {
+      throw new NotFoundException('Рейтинг не знайдено');
+    }
+
+    rating.status = RatingStatus.PENDING;
+    await this.ratingRepository.save(rating);
+
+    
       try {
-        await this.mailService.sendRatingNotification(updatedRating, respondents);
+        await this.mailService.sendRatingNotification(rating, rating.participants.map(p => p.respondent));
         console.log('Повідомлення успішно відправлені');
       } catch (error) {
         console.error('Помилка відправки повідомлень:', error);
       }
-    }  Потім включити, працює*/ 
+     
 
-    return updatedRating;
+    return rating;
+  }
+
+  async finalizeRating(ratingId: number) {
+    const rating = await this.ratingRepository.findOne({
+      where: { id: ratingId },
+      relations: ['items', 'participants', 'participants.respondent', 'author']
+    });
+
+    if (!rating) {
+      throw new NotFoundException('Рейтинг не знайдено');
+    }
+
+    rating.status = RatingStatus.CLOSED;
+    await this.ratingRepository.save(rating);
+
+    try {
+      await this.mailService.sendRatingNotification(rating, rating.participants.map(p => p.respondent));
+      console.log('Повідомлення успішно відправлені');
+    } catch (error) {
+      console.error('Помилка відправки повідомлень:', error);
+      throw new Error('Помилка відправки повідомлень');
+    }
+
+    return rating;
   }
 }

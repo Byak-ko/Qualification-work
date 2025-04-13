@@ -1,15 +1,18 @@
 import { IsEnum, IsObject, IsOptional } from 'class-validator';
-import { RatingApprovalStatus } from '../../entities/rating-approval.entity';
+import { RatingApprovalStatus, ReviewLevel } from '../../entities/rating-approval.entity';
   
-  export class RatingApprovalDto {
+export class RatingApprovalDto {
+  ratingId: number;
 
-    ratingId: number;
+  @IsEnum(RatingApprovalStatus)
+  status: RatingApprovalStatus;
 
-    @IsEnum(RatingApprovalStatus)
-    status: RatingApprovalStatus;
+  @IsOptional()
+  @IsObject()
+  comments: Record<number, string>; 
+}
 
-    @IsOptional()
-    @IsObject()
-    comments: Record<number, string>; 
-  }
-  
+export class RatingApprovalCommentsDto {
+  reviewLevel: ReviewLevel;
+  comments: Record<number, string>;
+}

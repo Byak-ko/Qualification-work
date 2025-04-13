@@ -32,6 +32,10 @@ export class RatingService {
     return this.ratingResponseService.fillRating(ratingId, userId, dto);
   }
 
+  async fillRespondentRating(ratingId: number, userId: number) {
+    return this.ratingResponseService.fillRespondentRating(ratingId, userId);
+  }
+
   async getRatingForReview(ratingId: number, respondentId: number, reviewerId: number) {
     return this.ratingReviewService.getRatingForReview(ratingId, respondentId, reviewerId);
   }
@@ -44,11 +48,21 @@ export class RatingService {
     return this.ratingQueryService.getAllRatings();
   }
 
+  async getClosedRatings() {
+    return this.ratingQueryService.getClosedRatings();
+  }
+
   async getRatingsByUserId(userId: number) {
     return this.ratingQueryService.getRatingsByUserId(userId);
   }
   async getRatingDetails(ratingId: number) {
     return this.ratingQueryService.getRatingDetails(ratingId);
   }
+  async getParticipantApprovals(participantId: number) {
+    return this.ratingQueryService.getParticipantApprovals(participantId);
+  }
   
+  async completeRating(ratingId: number) {
+    return this.ratingCreationService.completeRating(ratingId);
+  }
 }
