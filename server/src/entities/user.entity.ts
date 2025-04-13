@@ -25,6 +25,7 @@ export enum Position {
   DEAN_OR_DIRECTOR = 'Декан факультету / директор ННІ',
   VICE_RECTOR = 'Проректор',
   RECTOR = 'Ректор',
+  ADMIN = 'Адміністратор'
 }
 
 @Entity()
@@ -49,7 +50,7 @@ export class User {
 
   @Column({ default: Degree.NONE, type: 'enum', enum: Degree })
   degree?: Degree;
-
+  
   @Column({ default: Position.LECTURER, type: 'enum', enum: Position })
   position: Position;
 

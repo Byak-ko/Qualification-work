@@ -29,6 +29,9 @@ export class Rating {
   @Column()
   title: string;
 
+  @Column({ type: 'timestamp', nullable: true })
+  endedAt: Date;
+
   @Column({ default: 'created', type: 'enum', enum: RatingStatus })
   status: RatingStatus;
 

@@ -12,7 +12,7 @@ export class RatingItem {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ type: 'float', default: 0 })
   maxScore: number;
 
   @Column({ type: 'text', nullable: true })

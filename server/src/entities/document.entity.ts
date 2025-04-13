@@ -1,6 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { RatingItem } from './rating-item.entity';
-import { RatingResponse } from './rating-response.entity';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
 export class Document {
@@ -12,7 +10,4 @@ export class Document {
 
   @Column({ nullable: true })
   title: string;
-
-  @ManyToOne(() => RatingResponse, (response) => response.documents)
-  response: RatingResponse;
 }

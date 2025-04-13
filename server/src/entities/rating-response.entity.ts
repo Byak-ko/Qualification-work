@@ -1,8 +1,6 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Document } from './document.entity';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Rating } from './rating.entity';
 import { User } from './user.entity';
-import { RatingItem } from './rating-item.entity';
 import { RatingParticipant } from './rating-participant.entity';
 
 @Entity()
@@ -10,11 +8,11 @@ export class RatingResponse {
     @PrimaryGeneratedColumn()
     id: number;
    
-    @Column({ type: 'float', default: 0 })
-    score: number;
+    @Column({ type: 'jsonb', default: {} })
+    scores: Record<number, number>; // key: ratingItemId, value: score
     
-    @ManyToOne(() => RatingItem, { onDelete: 'CASCADE' })
-    item: RatingItem;
+    @Column({ type: 'jsonb', default: {} })
+    documents: Record<number, string[]>; // key: ratingItemId, value: array of document URLs
     
     @ManyToOne(() => User)
     respondent: User;
@@ -24,10 +22,4 @@ export class RatingResponse {
     
     @ManyToOne(() => RatingParticipant, (p) => p.responses, { onDelete: 'CASCADE' })
     participant: RatingParticipant;
-    
-    @OneToMany(() => Document, (doc) => doc.response, { 
-      cascade: true, 
-      onDelete: 'CASCADE' 
-    })
-    documents: Document[];
 }
