@@ -16,7 +16,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import EditRatingPage from "../pages/rating-managment/EditRatingPage";
 import RatingsPage from "../pages/RatingsPage";
 import ClosedRatingsPage from "../pages/RatingsClosed";
-
+import AboutPage from "../pages/AboutPage";
 
 export const router = createBrowserRouter([
   {
@@ -72,7 +72,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "ratings/:id/edit",
+        path: "ratings/edit",
         element: (
           <ProtectedRoute>
             <EditRatingPage />
@@ -80,7 +80,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "ratings/:id/fill",
+        path: "ratings/fill",
         element: (
           <ProtectedRoute>
             <FillRatingPage />
@@ -88,14 +88,13 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/ratings/:ratingId/review/:respondentId",
+        path: "ratings/review",
         element: (
           <ProtectedRoute>
             <ReviewRatingPage />
           </ProtectedRoute>
         ),
       },
-
       {
         path: "reports",
         element: (
@@ -121,6 +120,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/about",
+    element: <AboutPage />,
   },
   {
     path: "*",
