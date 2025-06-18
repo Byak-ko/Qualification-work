@@ -18,19 +18,8 @@ import {
   DocumentDuplicateIcon,
   CalendarIcon,
 } from '@heroicons/react/24/outline';
-import { RatingType } from "../../types/Rating";
-
-interface RatingTemplate {
-  id: number;
-  title: string;
-  type: string;
-  items: {
-    name: string;
-    maxScore: number;
-    comment: string;
-    isDocNeed: boolean;
-  }[];
-}
+import { RatingType, RatingTemplate } from "../../types/Rating";
+import TemplateSelector from "./TemplateSelector";
 
 export default function CreateRatingPage() {
   const [title, setTitle] = useState("");
@@ -52,16 +41,18 @@ export default function CreateRatingPage() {
 
   useEffect(() => {
     api.get("/users").then((res) => setAllUsers(res.data));
-
+  
     api.get("/ratings").then((res) => {
-      const availableTemplates = res.data.map((rating: any) => ({
-        id: rating.id,
-        title: rating.title,
-        type: rating.type,
-        items: rating.items
-      }));
+      const availableTemplates = res.data
+        .filter((rating: any) => rating.status === "closed")
+        .map((rating: any) => ({
+          id: rating.id,
+          title: rating.title,
+          type: rating.type,
+          items: rating.items,
+        }));
       setTemplates(availableTemplates);
-    }).catch(err => {
+    }).catch((err) => {
       toast.error("Помилка завантаження шаблонів рейтингів");
       console.error(err);
     });
@@ -154,7 +145,11 @@ export default function CreateRatingPage() {
       toast.error("Додайте хоча б один валідний пункт рейтингу");
       return;
     }
-
+    if (selectedRespondentIds.length === 0) {
+      toast.error("Виберіть хоча б одного респондента");
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       const reviewerDepartmentsIds = departmentReviewerIds;
@@ -192,57 +187,95 @@ export default function CreateRatingPage() {
               <DocumentDuplicateIcon className="w-6 h-6 mr-2" />
               <h2 className="text-xl font-bold">Тип створення</h2>
             </div>
-
-            <div className="flex items-center space-x-4 mb-4">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={!useTemplate}
-                  onChange={() => {
-                    setUseTemplate(false);
-                    setSelectedTemplateId("");
-                    setTitle("");
-                    setType("");
-                    setItems([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
-                  }}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-gray-700">Новий рейтинг</span>
-              </label>
-
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={useTemplate}
-                  onChange={() => setUseTemplate(true)}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-gray-700">За шаблоном</span>
-              </label>
+            
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div 
+                onClick={() => {
+                  setUseTemplate(false);
+                  setSelectedTemplateId("");
+                  setTitle("");
+                  setType("");
+                  setItems([{ name: "", maxScore: 10, comment: "", isDocNeed: false }]);
+                }}
+                className={`
+                  relative cursor-pointer rounded-xl overflow-hidden group transition-all duration-300
+                  ${!useTemplate 
+                    ? 'border-2 border-blue-500 shadow-lg shadow-blue-100 scale-102'
+                    : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                  }
+                `}
+              >
+                <div className="flex items-center p-4">
+                  <div className={`
+                    p-3 rounded-full text-white mr-4
+                    ${!useTemplate ? 'bg-blue-500' : 'bg-gray-200 group-hover:bg-blue-100 group-hover:text-blue-500 text-gray-500'}
+                    transition-colors duration-300
+                  `}>
+                    <DocumentPlusIcon className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold text-lg ${!useTemplate ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                      Новий рейтинг
+                    </h3>
+                    <p className="text-sm text-gray-500 group-hover:text-gray-600">
+                      Створити рейтинг з нуля
+                    </p>
+                  </div>
+                  {!useTemplate && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-2 py-1 text-xs font-semibold rounded-bl-lg">
+                      Обрано
+                    </div>
+                  )}
+                </div>
+                {!useTemplate && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500"></div>}
+              </div>
+              
+              <div 
+                onClick={() => setUseTemplate(true)}
+                className={`
+                  relative cursor-pointer rounded-xl overflow-hidden group transition-all duration-300
+                  ${useTemplate 
+                    ? 'border-2 border-blue-500 shadow-lg shadow-blue-100 scale-102'
+                    : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+                  }
+                `}
+              >
+                <div className="flex items-center p-4">
+                  <div className={`
+                    p-3 rounded-full text-white mr-4
+                    ${useTemplate ? 'bg-blue-500' : 'bg-gray-200 group-hover:bg-blue-100 group-hover:text-blue-500 text-gray-500'}
+                    transition-colors duration-300
+                  `}>
+                    <DocumentDuplicateIcon className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold text-lg ${useTemplate ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'}`}>
+                      За шаблоном
+                    </h3>
+                    <p className="text-sm text-gray-500 group-hover:text-gray-600">
+                      Використати існуючий шаблон
+                    </p>
+                  </div>
+                  {useTemplate && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-2 py-1 text-xs font-semibold rounded-bl-lg">
+                      Обрано
+                    </div>
+                  )}
+                </div>
+                {useTemplate && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500"></div>}
+              </div>
             </div>
 
             {useTemplate && (
-              <div className="mt-4">
+              <div className="animate-fadeIn">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Виберіть шаблон
+                  Виберіть шаблон рейтингу
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
-                    <DocumentDuplicateIcon className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(e) => handleTemplateChange(e.target.value ? Number(e.target.value) : "")}
-                    className="border border-gray-300 py-2 px-3 rounded-lg text-gray-900 bg-white transition duration-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 shadow-sm pl-10 w-full"
-                  >
-                    <option value="">Виберіть шаблон рейтингу</option>
-                    {templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.title} ({template.type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <TemplateSelector 
+                  templates={templates}
+                  selectedTemplateId={selectedTemplateId}
+                  onSelectTemplate={handleTemplateChange}
+                />
               </div>
             )}
           </div>
@@ -286,9 +319,6 @@ export default function CreateRatingPage() {
                 </div>
               </div>
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Кінцева дата
-                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
                     <CalendarIcon className="w-5 h-5 text-blue-500" />
@@ -325,7 +355,6 @@ export default function CreateRatingPage() {
               <h2 className="text-xl font-bold">Респонденти</h2>
             </div>
             <RespondentSelector
-              users={allUsers}
               selectedRespondentIds={selectedRespondentIds}
               onSelect={handleRespondentChange}
               onSelectMultiple={handleMultipleRespondentChange}
