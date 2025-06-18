@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { api } from '../../services/api/api';
 import Spinner from '../../components/ui/Spinner';
@@ -11,8 +11,15 @@ import { Rating } from '../../types/Rating';
 import { RatingParticipantStatus, ReviewLevel } from '../../types/Rating';
 
 export default function RespondentRatingPage() {
-  const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const id = searchParams.get('id');
+
+  useEffect(() => {
+    if (!id || isNaN(Number(id))) {
+      navigate('/ratings');
+    }
+  }, [id, navigate]);
 
   const [rating, setRating] = useState<Rating | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,18 +32,15 @@ export default function RespondentRatingPage() {
       .get(`/ratings/${id}/respondent`)
       .then((res) => {
         const data = res.data;
-        console.log(data);
-        const itemsWithDefaults = data.items.map((item: any) => {
-          return {
-            ...item,
-            score: item.score || 0,
-            documents: [],
-            documentUrls: item.documentUrls || [],
-            isDocNeed: item.isDocNeed || false,
-          };
-        });
+        const itemsWithDefaults = data.items.map((item: any) => ({
+          ...item,
+          score: item.score || 0,
+          documents: [],
+          documentUrls: item.documentUrls || [],
+          isDocNeed: item.isDocNeed || false,
+        }));
         setRating({ ...data, items: itemsWithDefaults });
-        console.log(itemsWithDefaults);
+        
         if (data.participantStatus === RatingParticipantStatus.REVISION) {
           fetchReviewerComments(data.participantId);
         }
@@ -52,22 +56,18 @@ export default function RespondentRatingPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, navigate]);
 
   const fetchReviewerComments = async (participantId: number) => {
     try {
       const res = await api.get(`/ratings/participants/${participantId}/approvals`);
-      console.log('Approvals:', res.data);
       const approvals = res.data;
-
-      // Define reviewer levels priority (from highest to lowest)
       const reviewerLevels = [
         ReviewLevel.DEPARTMENT,
         ReviewLevel.UNIT,
         ReviewLevel.AUTHOR
       ];
 
-      // Find the highest level reviewer that has comments
       const highestReviewerApproval = reviewerLevels
         .map(level => approvals.find((a: any) => 
           a.reviewLevel === level && 
@@ -76,7 +76,6 @@ export default function RespondentRatingPage() {
         ))
         .find(approval => approval !== undefined);
 
-      console.log('Highest reviewer approval:', highestReviewerApproval);
       setReviewerComments(highestReviewerApproval?.comments || null);
     } catch (error) {
       console.error('Помилка завантаження коментарів:', error);
@@ -139,7 +138,6 @@ export default function RespondentRatingPage() {
   const handlePreview = () => {
     if (!rating) return;
 
-    // Check if all required documents are provided
     const missingDocs = rating.items.filter(item => {
       return (
         item.isDocNeed && 
@@ -158,7 +156,6 @@ export default function RespondentRatingPage() {
       return;
     }
 
-    // Check if all scores are within valid range
     const invalidScores = rating.items.filter(item => {
       return item.score < 0 || (item.maxScore > 0 && item.score > item.maxScore);
     });
@@ -187,15 +184,11 @@ export default function RespondentRatingPage() {
     setSubmitting(true);
 
     try {
-      // Create an array for the items to submit
       const itemsToSubmit = [];
 
-      // Process each rating item
       for (const item of rating.items) {
-        // Start with any existing document URLs
         const documentUrls = [...(item.documentUrls || [])];
 
-        // Upload any new documents and add their URLs
         for (const file of item.documents) {
           try {
             const url = await uploadDocument(file);
@@ -208,7 +201,6 @@ export default function RespondentRatingPage() {
           }
         }
 
-        // Add this item to the submission data
         itemsToSubmit.push({
           id: item.id,
           score: item.score || 0,
@@ -216,16 +208,13 @@ export default function RespondentRatingPage() {
         });
       }
 
-      // Send the data to the server
-      const response = await api.post(`/ratings/${id}/respondent-fill`, {
+      await api.post(`/ratings/${id}/respondent-fill`, {
         items: itemsToSubmit,
       });
 
-      console.log('Server response:', response.data);
-      toast.success('Рейтинг успішно заповнено');
+      toast.success('Рейтинг успішно збережено!');
       navigate('/ratings');
     } catch (err: any) {
-      console.error('Error submitting rating:', err?.response?.data || err);
       const errorMessage = err.response?.data?.message || err.message || 'Помилка при відправленні';
       toast.error(errorMessage);
     } finally {
@@ -237,7 +226,6 @@ export default function RespondentRatingPage() {
     if (!rating) return 0;
     
     return rating.items.filter(item => {
-      // For items that require documents
       if (item.isDocNeed) {
         return (
           item.score > 0 && 
@@ -246,7 +234,6 @@ export default function RespondentRatingPage() {
         );
       }
       
-      // For items that don't require documents
       return item.score > 0;
     }).length;
   };
@@ -260,9 +247,8 @@ export default function RespondentRatingPage() {
   const isRevisionMode = rating.participantStatus === RatingParticipantStatus.REVISION;
 
   return (
-    <div className="bg-gradient-to-b from-indigo-50 to-white min-h-screen py-6 px-4">
-      <div className="max-w-6xl mx-auto">
-
+    <div className="min-h-screen py-6 px-4">
+      <div className="max-w-7xl mx-auto">
         <div className="bg-white shadow-lg rounded-2xl mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6">
             <div className="flex items-center justify-between">
@@ -270,7 +256,6 @@ export default function RespondentRatingPage() {
                 <DocumentCheckIcon className="w-8 h-8 mr-3" />
                 {isRevisionMode ? 'Коригування рейтингу' : 'Заповнення рейтингу'}
               </h1>
-
               <div className="bg-white/20 rounded-xl px-4 py-2 text-white backdrop-blur-sm flex items-center">
                 <div className="mr-3">
                   <div className="text-xs text-white/80 mb-1">Заповнено</div>
@@ -295,7 +280,6 @@ export default function RespondentRatingPage() {
               </div>
             </div>
             <p className="text-white/80 mt-2 text-lg font-medium">{rating.title}</p>
-
             {isRevisionMode && (
               <div className="mt-3 bg-white/10 px-4 py-3 rounded-lg backdrop-blur-sm">
                 <p className="text-white font-medium">Рейтинг потребує коригування. Перегляньте коментарі перевіряючого.</p>
@@ -303,9 +287,8 @@ export default function RespondentRatingPage() {
             )}
           </div>
         </div>
-
-        <div className="bg-white shadow-lg rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white shadow-lg rounded-2xl p-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {rating.items.map((item, index) => (
               <RatingItemBlock
                 key={item.id}
@@ -320,7 +303,6 @@ export default function RespondentRatingPage() {
             ))}
           </div>
         </div>
-
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="bg-indigo-50 border-l-4 border-indigo-400 rounded-lg px-4 py-3 text-indigo-800 flex items-start">
             <InformationCircleIcon className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -335,28 +317,25 @@ export default function RespondentRatingPage() {
               </ul>
             </div>
           </div>
-
           <div className="flex gap-3">
             <Button
-              onClick={handlePreview}
+              variant="primary"
+              size="md"
+              icon={<DocumentMagnifyingGlassIcon className="w-5 h-5" />}
               disabled={submitting}
-              className="bg-indigo-600 text-white hover:bg-indigo-700
-                       transition-colors duration-300
-                       flex items-center gap-2
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handlePreview}
             >
-              <DocumentMagnifyingGlassIcon className="w-5 h-5" />
               Попередній перегляд
             </Button>
           </div>
         </div>
-
         {showPreview && rating && (
           <RatingPreviewModal
             items={rating.items}
             submitting={submitting}
             onClose={() => setShowPreview(false)}
             onSubmit={handleSubmit}
+            isOpen={showPreview}
           />
         )}
       </div>
