@@ -7,7 +7,7 @@ import { resetPassword } from "../services/api/authService";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token"); // Отримуємо токен з URL
+  const token = searchParams.get("token");
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
