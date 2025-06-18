@@ -25,23 +25,23 @@ export class RatingService {
   }
 
   async getRatingForRespondent(ratingId: number, userId: number) {
-    return this.ratingResponseService.getRatingForRespondent(ratingId, userId);
+    return this.ratingQueryService.getRatingForRespondent(ratingId, userId);
   }
 
   async fillRating(ratingId: number, userId: number, dto: FillRatingDto) {
     return this.ratingResponseService.fillRating(ratingId, userId, dto);
   }
 
-  async fillRespondentRating(ratingId: number, userId: number) {
-    return this.ratingResponseService.fillRespondentRating(ratingId, userId);
+  async fillCompleteRating(ratingId: number, userId: number) {
+    return this.ratingResponseService.fillCompleteRating(ratingId, userId);
   }
 
   async getRatingForReview(ratingId: number, respondentId: number, reviewerId: number) {
-    return this.ratingReviewService.getRatingForReview(ratingId, respondentId, reviewerId);
+    return this.ratingQueryService.getRatingForReview(ratingId, respondentId, reviewerId);
   }
 
-  async reviewRating(ratingId: number, dto: RatingApprovalDto, userId: number) {
-    return this.ratingReviewService.reviewRating(ratingId, dto, userId);
+  async reviewRating(ratingId: number, dto: RatingApprovalDto, userId: number, respondentId: number) {
+    return this.ratingReviewService.reviewRating(ratingId, dto, userId, respondentId);
   }
 
   async getAllRatings() {
@@ -62,7 +62,7 @@ export class RatingService {
     return this.ratingQueryService.getParticipantApprovals(participantId);
   }
   
-  async completeRating(ratingId: number) {
-    return this.ratingCreationService.completeRating(ratingId);
+  async submitRating(ratingId: number) {
+    return this.ratingCreationService.submitRating(ratingId);
   }
 }

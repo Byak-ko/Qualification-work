@@ -25,14 +25,14 @@ export class UserService {
   }
 
   async findById(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id }, relations: ['department'] });
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['department', 'department.unit'] });
     if (!user) {
       throw new NotFoundException(`Користувача з ID ${id} не знайдено`);
     }
     return user;
   }
   async findByEmail(email: string): Promise<User | null> {
-    const user = await this.userRepository.findOne({ where: { email }, relations: ['department'] });
+    const user = await this.userRepository.findOne({ where: { email }, relations: ['department', 'department.unit'] });
     return user || null;
   }
 
@@ -119,5 +119,25 @@ export class UserService {
     const user = await this.userRepository.findOne({ where: { id } })
     if (!user) throw new NotFoundException('Користувача не знайдено')
     return this.userRepository.remove(user)
+  }
+  async getFilteredUsers(filters: { name?: string; departmentName?: string; unitName?: string;}): Promise<User[]> {
+    const { name, departmentName, unitName } = filters;
+    const query = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.department', 'department')
+      .leftJoinAndSelect('department.unit', 'unit');
+      
+    if (name) {
+      query.andWhere('(user.firstName LIKE :name OR user.lastName LIKE :name)', { name: `%${name}%` });
+    }
+    
+    if (departmentName) {
+      query.andWhere('department.name LIKE :departmentName', { departmentName: `%${departmentName}%` });
+    }
+    
+    if (unitName) {
+      query.andWhere('unit.name LIKE :unitName', { unitName: `%${unitName}%` });
+    }
+    console.log(query);
+    return await query.getMany();
   }
 }
