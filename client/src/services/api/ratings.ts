@@ -11,6 +11,11 @@ export const submitReview = async (ratingId: number, respondentId: number, paylo
   return response.data;
 };
 
+export const getRatingById = async (ratingId: number) => {
+  const response = await api.get(`/ratings/${ratingId}`);
+  return response.data;
+};
+
 export const getRatingsByUserId = async () => {
   const response = await api.get(`/ratings/user`);
   return response.data;
@@ -31,8 +36,8 @@ export const fillRespondentRating = async (ratingId: number) => {
   return response.data;
 };
 
-export const completeRating = async (ratingId: number) => {
-  const response = await api.post(`/ratings/${ratingId}/complete`);
+export const submitRating = async (ratingId: number) => {
+  const response = await api.post(`/ratings/${ratingId}/submit`);
   return response.data;
 };
 
