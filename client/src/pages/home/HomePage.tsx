@@ -44,7 +44,7 @@ const HomePage = () => {
           title="Про систему"
           description="Система управління рейтингами викладачів, аналітикою та процесом заповнення."
           icon={<InformationCircleIcon className="w-10 h-10 text-indigo-500" />}
-          to="#"
+          to="/about" 
         />
         {currentUser?.role === Role.ADMIN && (
           <>
@@ -59,6 +59,12 @@ const HomePage = () => {
               description="Налаштування факультетів та кафедр."
               icon={<BuildingOfficeIcon className="w-10 h-10 text-purple-500" />}
               to="/units"
+            />
+              <HomeCard
+              title="Закриті рейтинги"
+              description="Перегляньте та керуйте документами закритих рейтингів."
+              icon={<ClipboardDocumentIcon className="w-10 h-10 text-yellow-500" />}
+              to="/ratings/documents"
             />
           </>
         )}

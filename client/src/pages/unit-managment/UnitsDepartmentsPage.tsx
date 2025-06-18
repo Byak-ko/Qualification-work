@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react"
-import { api } from "../../services/api/api"
-import EditModal from "../../components/EditModal"
-import ConfirmModal from "../../components/ConfirmModal"
-import { toast } from "react-toastify"
-import { motion, AnimatePresence } from "framer-motion"
-import { User } from "../../types/User"
-import Spinner from "../../components/ui/Spinner"
-import SkeletonCard from "../../components/ui/Skeleton"
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../../services/api/api";
+import EditModal from "../../components/EditModal";
+import ConfirmModal from "../../components/ConfirmModal";
+import { toast } from "react-toastify";
+import { motion, AnimatePresence } from "framer-motion";
+import { User } from "../../types/User";
+import Spinner from "../../components/ui/Spinner";
+import SkeletonCard from "../../components/ui/Skeleton";
 import {
   BuildingOffice2Icon,
   AcademicCapIcon,
@@ -14,42 +14,43 @@ import {
   PencilIcon,
   TrashIcon,
   MagnifyingGlassIcon,
-  UserIcon
-} from '@heroicons/react/24/outline';
+  UserIcon,
+} from "@heroicons/react/24/outline";
+import Button from "../../components/ui/Button";
 
 enum UnitType {
-  FACULTY = 'Факультет',
-  INSTITUTE = 'Інститут'
+  FACULTY = "Факультет",
+  INSTITUTE = "Інститут",
 }
 
 type Unit = {
-  id: number
-  name: string
-  type: keyof typeof UnitType
-}
+  id: number;
+  name: string;
+  type: keyof typeof UnitType;
+};
 
 type Department = {
-  id: number
-  name: string
-  unit: Unit
-}
+  id: number;
+  name: string;
+  unit: Unit;
+};
 
 export default function UnitsDepartmentsPage() {
-  const [units, setUnits] = useState<Unit[]>([])
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState("");
 
-  const [editUnitModalOpen, setEditUnitModalOpen] = useState(false)
-  const [editDepartmentModalOpen, setEditDepartmentModalOpen] = useState(false)
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false)
-  const [defaultDepartmentUnit, setDefaultDepartmentUnit] = useState<Unit | null>(null)
+  const [editUnitModalOpen, setEditUnitModalOpen] = useState(false);
+  const [editDepartmentModalOpen, setEditDepartmentModalOpen] = useState(false);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [defaultDepartmentUnit, setDefaultDepartmentUnit] = useState<Unit | null>(null);
 
-  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "unit" | "department"; id: number } | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "unit" | "department"; id: number } | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -70,86 +71,84 @@ export default function UnitsDepartmentsPage() {
   };
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   const handleCreateUnit = async (data: { name: string; type: string }) => {
     try {
-      await api.post("/units", data)
-      setEditUnitModalOpen(false)
-      toast.success("Підрозділ створено")
-      fetchData()
+      await api.post("/units", data);
+      setEditUnitModalOpen(false);
+      toast.success("Підрозділ створено");
+      fetchData();
     } catch {
-      toast.error("Помилка при створенні підрозділу")
+      toast.error("Помилка при створенні підрозділу");
     }
-  }
+  };
 
   const handleEditUnit = async (data: { name: string; type: string }) => {
-    if (!selectedUnit) return
+    if (!selectedUnit) return;
     try {
-      await api.patch(`/units/${selectedUnit.id}`, data)
-      setEditUnitModalOpen(false)
-      toast.success("Підрозділ оновлено")
-      fetchData()
+      await api.patch(`/units/${selectedUnit.id}`, data);
+      setEditUnitModalOpen(false);
+      toast.success("Підрозділ оновлено");
+      fetchData();
     } catch {
-      toast.error("Помилка при оновленні підрозділу")
+      toast.error("Помилка при оновленні підрозділу");
     }
-  }
+  };
 
   const handleDeleteUnit = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/units/${deleteTarget.id}`)
-      toast.success("Підрозділ видалено")
-      fetchData()
+      await api.delete(`/units/${deleteTarget.id}`);
+      toast.success("Підрозділ видалено");
+      fetchData();
     } catch {
-      toast.error("Помилка при видаленні підрозділу")
+      toast.error("Помилка при видаленні підрозділу");
     } finally {
-      setConfirmModalOpen(false)
+      setConfirmModalOpen(false);
     }
-  }
+  };
 
   const handleCreateDepartment = async (data: { name: string; unit: Unit }) => {
     try {
-      await api.post("/departments", data)
-      setEditDepartmentModalOpen(false)
-      toast.success("Кафедру створено")
-      fetchData()
+      await api.post("/departments", data);
+      setEditDepartmentModalOpen(false);
+      toast.success("Кафедру створено");
+      fetchData();
     } catch {
-      toast.error("Помилка при створенні кафедри")
+      toast.error("Помилка при створенні кафедри");
     }
-  }
+  };
 
   const handleEditDepartment = async (data: { name: string; unit: Unit }) => {
-    if (!selectedDepartment) return
+    if (!selectedDepartment) return;
     try {
-      await api.patch(`/departments/${selectedDepartment.id}`, data)
-      setEditDepartmentModalOpen(false)
-      toast.success("Кафедру оновлено")
-      fetchData()
+      await api.patch(`/departments/${selectedDepartment.id}`, data);
+      setEditDepartmentModalOpen(false);
+      toast.success("Кафедру оновлено");
+      fetchData();
     } catch {
-      toast.error("Помилка при оновленні кафедри")
+      toast.error("Помилка при оновленні кафедри");
     }
-  }
+  };
 
   const handleDeleteDepartment = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/departments/${deleteTarget.id}`)
-      toast.success("Кафедру видалено")
-      fetchData()
+      await api.delete(`/departments/${deleteTarget.id}`);
+      toast.success("Кафедру видалено");
+      fetchData();
     } catch {
-      toast.error("Помилка при видаленні кафедри")
+      toast.error("Помилка при видаленні кафедри");
     } finally {
-      setConfirmModalOpen(false)
+      setConfirmModalOpen(false);
     }
-  }
+  };
 
   const filteredUnits = useMemo(() => {
-    return units.filter((unit) =>
-      unit.name.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [search, units])
+    return units.filter((unit) => unit.name.toLowerCase().includes(search.toLowerCase()));
+  }, [search, units]);
 
   return (
     <div className="container mx-auto max-w-6xl bg-white shadow-2xl rounded-2xl overflow-hidden">
@@ -178,29 +177,30 @@ export default function UnitsDepartmentsPage() {
             />
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-400" />
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
+            icon={<PlusIcon className="h-5 w-5" />}
             onClick={() => {
-              setSelectedUnit(null)
-              setEditUnitModalOpen(true)
+              setSelectedUnit(null);
+              setEditUnitModalOpen(true);
             }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition duration-300 flex items-center space-x-2"
           >
-            <PlusIcon className="h-5 w-5" />
-            <span>Додати підрозділ</span>
-          </button>
+            Додати підрозділ
+          </Button>
         </div>
 
         {isLoading ? (
           <div>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </div>
         ) : (
           <div className="space-y-6">
             <AnimatePresence>
               {filteredUnits.map((unit) => {
-                const unitDepartments = departments.filter((d) => d.unit.id === unit.id)
+                const unitDepartments = departments.filter((d) => d.unit.id === unit.id);
 
                 return (
                   <motion.div
@@ -219,42 +219,46 @@ export default function UnitsDepartmentsPage() {
                         <p className="text-blue-500">{UnitType[unit.type as keyof typeof UnitType]}</p>
                       </div>
                       <div className="flex space-x-2">
-                        <button
+                        <Button
+                          variant="edit"
+                          size="md"
+                          icon={<PencilIcon className="h-5 w-5" />}
                           onClick={() => {
-                            setSelectedUnit(unit)
-                            setEditUnitModalOpen(true)
+                            setSelectedUnit(unit);
+                            setEditUnitModalOpen(true);
                           }}
-                          className="bg-yellow-500 text-white px-4 py-2 rounded-full hover:bg-yellow-600 transition flex items-center space-x-2"
                         >
-                          <PencilIcon className="h-5 w-5" />
-                          <span>Редагувати</span>
-                        </button>
-                        <button
+                          Редагувати
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="md"
+                          icon={<TrashIcon className="h-5 w-5" />}
                           onClick={() => {
-                            setDeleteTarget({ type: "unit", id: unit.id })
-                            setConfirmModalOpen(true)
+                            setDeleteTarget({ type: "unit", id: unit.id });
+                            setConfirmModalOpen(true);
                           }}
-                          className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition flex items-center space-x-2"
                         >
-                          <TrashIcon className="h-5 w-5" />
-                          <span>Видалити</span>
-                        </button>
-                        <button className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition flex items-center space-x-2"
+                          Видалити
+                        </Button>
+                        <Button
+                          variant="green"
+                          size="md"
+                          icon={<PlusIcon className="h-5 w-5" />}
                           onClick={() => {
-                            setSelectedDepartment(null)
-                            setEditDepartmentModalOpen(true)
-                            setDefaultDepartmentUnit(unit)
-                          }}> <PlusIcon className="h-5 w-5" />
-                          <span>
-                            Додати кафедру
-                          </span>
-                        </button>
+                            setSelectedDepartment(null);
+                            setEditDepartmentModalOpen(true);
+                            setDefaultDepartmentUnit(unit);
+                          }}
+                        >
+                          Додати кафедру
+                        </Button>
                       </div>
                     </div>
 
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {unitDepartments.map((dept) => {
-                        const deptUsers = users.filter((u) => u.department?.id === dept.id)
+                        const deptUsers = users.filter((u) => u.department?.id === dept.id);
 
                         return (
                           <motion.div
@@ -268,39 +272,36 @@ export default function UnitsDepartmentsPage() {
                                 {dept.name}
                               </h3>
                               <div className="flex space-x-2">
-                                <div className="opacity-0 group-hover:opacity-100 
-                     transition-opacity duration-300 
-                     flex space-x-2">
-                                  <button
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
+                                  <Button
+                                    variant="icon-edit"
+                                    size="sm"
+                                    icon={<PencilIcon className="h-5 w-5" />}
                                     onClick={() => {
-                                      setSelectedDepartment(dept)
-                                      setEditDepartmentModalOpen(true)
+                                      setSelectedDepartment(dept);
+                                      setEditDepartmentModalOpen(true);
                                     }}
-                                    className="text-yellow-500 bg-yellow-50 p-1.5 rounded-md transition-colors duration-200"
-                                  >
-                                    <PencilIcon className="h-5 w-5" />
-                                  </button>
-                                  <button
+                                  />
+                                  <Button
+                                    variant="icon-danger"
+                                    size="sm"
+                                    icon={<TrashIcon className="h-5 w-5" />}
                                     onClick={() => {
-                                      setDeleteTarget({ type: "department", id: dept.id })
-                                      setConfirmModalOpen(true)
+                                      setDeleteTarget({ type: "department", id: dept.id });
+                                      setConfirmModalOpen(true);
                                     }}
-                                    className="text-red-500 bg-red-50 p-1.5 rounded-md transition-colors duration-200"
-                                  >
-                                    <TrashIcon className="h-5 w-5" />
-                                  </button>
+                                  />
                                 </div>
                               </div>
                             </div>
                             {deptUsers.length > 0 ? (
                               <ul className="space-y-2">
                                 {deptUsers.map((u) => (
-                                  <li
-                                    key={u.id}
-                                    className="flex items-center text-gray-700 space-x-2"
-                                  >
+                                  <li key={u.id} className="flex items-center text-gray-700 space-x-2">
                                     <UserIcon className="h-5 w-5 text-blue-400" />
-                                    <span>{u.firstName} {u.lastName}</span>
+                                    <span>
+                                      {u.firstName} {u.lastName}
+                                    </span>
                                   </li>
                                 ))}
                               </ul>
@@ -311,11 +312,11 @@ export default function UnitsDepartmentsPage() {
                               </p>
                             )}
                           </motion.div>
-                        )
+                        );
                       })}
                     </div>
                   </motion.div>
-                )
+                );
               })}
             </AnimatePresence>
           </div>
@@ -338,7 +339,7 @@ export default function UnitsDepartmentsPage() {
             defaultValue: selectedUnit?.type || "FACULTY",
             options: Object.entries(UnitType).map(([key, value]) => ({
               label: value,
-              value: key
+              value: key,
             })),
           },
         ]}
@@ -368,11 +369,9 @@ export default function UnitsDepartmentsPage() {
         title="Підтвердьте видалення"
         message="Ви впевнені, що хочете видалити цю сутність?"
         type="danger"
-        onSubmit={
-          deleteTarget?.type === "unit" ? handleDeleteUnit : handleDeleteDepartment
-        }
+        onSubmit={deleteTarget?.type === "unit" ? handleDeleteUnit : handleDeleteDepartment}
         onClose={() => setConfirmModalOpen(false)}
       />
     </div>
-  )
+  );
 }
