@@ -8,7 +8,7 @@ interface ButtonProps {
   full?: boolean;
   disabled?: boolean;
   icon?: ReactNode;
-  variant?: "primary" | "secondary" | "danger" | "green";
+  variant?: "primary" | "secondary" | "edit" | "danger" | "green" | "icon-edit" | "icon-danger" | "icon-secondary";
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
@@ -25,25 +25,26 @@ export default function Button({
   size = "md",
   isLoading = false,
   onClick,
+  className,
 }: ButtonProps) {
   const sizes = {
-    sm: "text-sm px-3 py-1.5",
-    md: "text-sm px-5 py-2.5",
+    sm: "text-sm px-2 py-1",
+    md: "text-sm px-4 py-2",
     lg: "text-base px-6 py-3",
   };
 
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-4 transition-all";
+    "inline-flex items-center justify-center gap-2 rounded-full font-medium focus:outline-none transition duration-300";
 
   const variants: Record<string, string> = {
-    primary:
-      "text-white bg-gradient-to-br from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:ring-blue-300",
-    secondary:
-      "text-gray-800 bg-gray-100 hover:bg-gray-200 focus:ring-gray-300",
-    danger:
-      "text-white bg-gradient-to-br from-red-500 to-orange-400 hover:from-red-600 hover:to-orange-500 focus:ring-red-200",
-    green:
-      "text-white bg-gradient-to-br from-green-400 to-blue-600 hover:from-green-500 hover:to-blue-700 focus:ring-green-200",
+    primary: "text-white bg-blue-600 hover:bg-blue-700",
+    secondary: "text-gray-800 bg-gray-200 hover:bg-gray-300",
+    edit: "text-white bg-yellow-500 hover:bg-yellow-600",
+    danger: "text-white bg-red-500 hover:bg-red-600",
+    green: "text-white bg-green-500 hover:bg-green-600",
+    "icon-edit": "text-yellow-500 bg-yellow-50 hover:bg-yellow-100 p-1.5 rounded-md",
+    "icon-danger": "text-red-500 bg-red-50 hover:bg-red-100 p-1.5 rounded-md",
+    "icon-secondary": "text-gray-500 hover:text-indigo-600 p-2 rounded-full",
   };
 
   return (
@@ -58,11 +59,12 @@ export default function Button({
         sizes[size],
         full && "w-full",
         (disabled || isLoading) && "opacity-50 cursor-not-allowed",
-        variants[variant]
+        variants[variant],
+        className
       )}
     >
       {isLoading ? (
-        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        <span className="w-4 h-4 border-2 border-gray-800 border-t-transparent rounded-full animate-spin"></span>
       ) : (
         <>
           {icon && <span className="w-4 h-4">{icon}</span>}
