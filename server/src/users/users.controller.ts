@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Req, Delete, Body, Param, UseGuards, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Req, Query, Delete, Body, Param, UseGuards, ConflictException, NotFoundException, UnauthorizedException, ParseIntPipe } from '@nestjs/common';
 import { UserService } from './users.service';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -17,14 +17,12 @@ export class UsersController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @Role(UserRole.ADMIN) 
   @ApiOperation({
     summary: 'Отримати всіх користувачів',
-    description: 'Повертає список всіх користувачів у системі. Доступно тільки для адміністраторів.',
+    description: 'Повертає список всіх користувачів у системі.',
   })
   @ApiResponse({ status: 200, description: 'Список користувачів', type: [User] })
   @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
-  @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
   findAll(): Promise<User[]> {
     return this.userService.findAll();
   }
@@ -39,6 +37,19 @@ export class UsersController {
   getCurrentUser(@Req() req) {
     console.log("current req",req.user.id)
     return this.userService.findById(req.user.id);
+  }
+
+  @Get('filter')
+  @ApiOperation({
+    summary: 'Отримати користувачів за фільтрами',
+    description: 'Повертає список користувачів, які відповідають наданим фільтрам.',
+  })
+  @ApiResponse({ status: 200, description: 'Список користувачів', type: [User] })
+  @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
+  @ApiResponse({ status: 404, description: 'Користувачі не знайдені' })
+  async getFilteredUsers(@Query() filters: { name?: string; departmentName?: string; unitName?: string }) {
+    console.log("фільтри",filters);
+    return this.userService.getFilteredUsers(filters);
   }
 
   @Get(':id')
@@ -57,7 +68,7 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Неавторизований доступ' })
   @ApiResponse({ status: 403, description: 'Недостатньо прав для доступу' })
   @ApiResponse({ status: 404, description: 'Користувач не знайдений' })
-  findOne(@Param('id') id: number): Promise<User> {
+  async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findById(id);
   }
 
@@ -196,11 +207,23 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Email вже використовується' })
   async changeEmail(
     @Param('id') id: string,
-    @Body() body: { email: string;},
+    @Body() body: { email: string },
   ): Promise<string> {
     const { email } = body;
-
-    const result = await this.userService.updatePassword(+id, email);
+  
+    const currentUser = await this.userService.findById(+id);
+    if (!currentUser) {
+      throw new NotFoundException('Користувач не знайдений');
+    }
+  
+    if (email !== currentUser.email) {
+      const existingUser = await this.userService.findByEmail(email);
+      if (existingUser) {
+        throw new ConflictException('Цей email вже використовується');
+      }
+    }
+  
+    const result = await this.userService.updateEmail(+id, email);
     return result.message;
   }
 
