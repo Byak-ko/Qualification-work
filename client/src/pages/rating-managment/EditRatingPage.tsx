@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../services/api/api";
 import Button from "../../components/ui/Button";
 import { User } from "../../types/User";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ReviewerSelector from "./ReviewerSelector";
 import { useAuth } from "../../components/AuthProvider";
@@ -39,8 +39,9 @@ export default function EditRatingPage() {
 
   const { currentUser } = useAuth();
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const id = searchParams.get('id');
 
   useEffect(() => {
     const fetchAllUsers = async () => {
@@ -74,12 +75,10 @@ export default function EditRatingPage() {
           setUnitReviewerIds(rating.unitReviewers.map((reviewer: User) => reviewer.id));
         }
 
-        // Fallback if API doesn't return separate arrays
         if (!rating.departmentReviewers || !rating.unitReviewers) {
           const departmentIds: number[] = [];
           const unitIds: number[] = [];
 
-          // Find unique departmentReviewers and unitReviewers from participants
           rating.participants.forEach(participant => {
             if (participant.departmentReviewer && !departmentIds.includes(participant.departmentReviewer.id)) {
               departmentIds.push(participant.departmentReviewer.id);
@@ -94,7 +93,6 @@ export default function EditRatingPage() {
           setUnitReviewerIds(unitIds);
         }
 
-        // Adapt items with isDocNeed field
         setItems(rating.items.map(item => ({
           id: item.id,
           name: item.name,
@@ -278,7 +276,6 @@ export default function EditRatingPage() {
               <h2 className="text-xl font-bold">Респонденти</h2>
             </div>
             <RespondentSelector
-              users={allUsers}
               selectedRespondentIds={selectedRespondentIds}
               onSelect={handleRespondentChange}
               onSelectMultiple={handleMultipleRespondentChange}
