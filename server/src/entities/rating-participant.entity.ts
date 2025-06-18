@@ -22,9 +22,6 @@ export class RatingParticipant {
   @ManyToOne(() => User)
   respondent: User;
   
-  @Column({ type: 'int', default: 0 })
-  totalScore: number;
-  
   @Column({ default: 'pending', type: 'enum', enum: RatingParticipantStatus })
   status: RatingParticipantStatus;
   

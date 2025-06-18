@@ -39,7 +39,8 @@ export class CreateRatingDto {
   reviewerIds?: number[];
 
   @IsDate()
-  @Transform(({ value }) => new Date(value))
+  @Transform(({ value }) => value ? new Date(value) : null)
+  @IsOptional()
   endedAt: Date;
 
   @IsArray()
