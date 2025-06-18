@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { MagnifyingGlassIcon, UserIcon, CheckIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline";
-import { User } from "../../types/User";
+import { Position, User } from "../../types/User";
 import Input from "../../components/ui/Input";
+import { getFilteredUsers } from "../../services/api/userService";
 
 type Props = {
   allUsers: User[];
@@ -22,36 +23,96 @@ export default function ReviewerSelector({
   setUnitReviewerIds,
   selectedRespondentIds,
 }: Props) {
-  const [search, setSearch] = useState("");
-  
+  const [nameSearch, setNameSearch] = useState("");
+  const [departmentSearch, setDepartmentSearch] = useState("");
+  const [unitSearch, setUnitSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   const [eligibleDepartments, setEligibleDepartments] = useState<Set<string>>(new Set());
   const [eligibleUnits, setEligibleUnits] = useState<Set<string>>(new Set());
-  
+
   const [selectedDepartmentMap, setSelectedDepartmentMap] = useState<Map<string, number>>(new Map());
   const [selectedUnitMap, setSelectedUnitMap] = useState<Map<string, number>>(new Map());
-  
+
   const [departmentUsers, setDepartmentUsers] = useState<User[]>([]);
   const [unitUsers, setUnitUsers] = useState<User[]>([]);
-  
+
   const [prevRespondentIds, setPrevRespondentIds] = useState<number[]>([]);
 
-  
   useEffect(() => {
-    const hasChanged = selectedRespondentIds.length !== prevRespondentIds.length || 
-      selectedRespondentIds.some(id => !prevRespondentIds.includes(id));
-    
-    if (hasChanged) {
-      setDepartmentReviewerIds([]);
-      setUnitReviewerIds([]);
-      setPrevRespondentIds([...selectedRespondentIds]);
+    if (prevRespondentIds.length === 0 && selectedRespondentIds.length > 0) {
+      setPrevRespondentIds(selectedRespondentIds);
+      return;
     }
-  }, [selectedRespondentIds, prevRespondentIds, setDepartmentReviewerIds, setUnitReviewerIds]);
 
-  
+    const removedIds = prevRespondentIds.filter(id => !selectedRespondentIds.includes(id));
+
+    if (removedIds.length > 0) {
+      const removedDepartments = new Set<string>();
+      const removedUnits = new Set<string>();
+
+      removedIds.forEach(id => {
+        const removedUser = allUsers.find(user => user.id === id);
+        if (removedUser) {
+          if (removedUser.department?.name) {
+            removedDepartments.add(removedUser.department.name);
+          }
+          if (removedUser.department?.unit.name) {
+            removedUnits.add(removedUser.department.unit.name);
+          }
+        }
+      });
+
+      const currentDepartments = new Set<string>();
+      const currentUnits = new Set<string>();
+
+      selectedRespondentIds.forEach(id => {
+        const user = allUsers.find(user => user.id === id);
+        if (user) {
+          if (user.department?.name) {
+            currentDepartments.add(user.department.name);
+          }
+          if (user.department?.unit.name) {
+            currentUnits.add(user.department.unit.name);
+          }
+        }
+      });
+
+      if (removedDepartments.size > 0) {
+        setDepartmentReviewerIds(prevIds => {
+          const newIds = prevIds.filter(id => {
+            const reviewer = allUsers.find(user => user.id === id);
+            return reviewer && reviewer.department?.name && currentDepartments.has(reviewer.department.name);
+          });
+          return prevIds.length === newIds.length && prevIds.every(id => newIds.includes(id))
+            ? prevIds
+            : newIds;
+        });
+      }
+
+      if (removedUnits.size > 0) {
+        setUnitReviewerIds(prevIds => {
+          const newIds = prevIds.filter(id => {
+            const reviewer = allUsers.find(user => user.id === id);
+            return reviewer && reviewer.department?.unit.name && currentUnits.has(reviewer.department.unit.name);
+          });
+          return prevIds.length === newIds.length && prevIds.every(id => newIds.includes(id))
+            ? prevIds
+            : newIds;
+        });
+      }
+    }
+
+    if (prevRespondentIds.length !== selectedRespondentIds.length ||
+      prevRespondentIds.some((id, index) => id !== selectedRespondentIds[index])) {
+      setPrevRespondentIds(selectedRespondentIds);
+    }
+  }, [selectedRespondentIds, prevRespondentIds, allUsers]);
+
   useEffect(() => {
     setEligibleDepartments(new Set());
     setEligibleUnits(new Set());
-    
+
     if (selectedRespondentIds.length === 0) return;
 
     const departments = new Set<string>();
@@ -73,44 +134,68 @@ export default function ReviewerSelector({
     setEligibleUnits(units);
   }, [selectedRespondentIds, allUsers]);
 
-  
   useEffect(() => {
-    const usersExcludingCurrent = allUsers.filter(user => user.id !== currentUser.id);
+    const fetchFilteredUsers = async () => {
+      if (selectedRespondentIds.length === 0) return;
 
-    const deptUsers: User[] = [];
-    const unitUsersList: User[] = [];
-    
-    usersExcludingCurrent.forEach(user => {
-      let addToDepartments = false;
-      let addToUnits = false;
-      
-      if (user.department?.name && eligibleDepartments.has(user.department.name)) {
-        addToDepartments = true;
-      }
-      
-      if (user.department?.unit.name && eligibleUnits.has(user.department.unit.name)) {
-        addToUnits = true;
-      }
-      
-      if (addToDepartments) {
-        deptUsers.push(user);
-      }
-      
-      if (addToUnits) {
-        unitUsersList.push(user);
-      }
-    });
-    
-    setDepartmentUsers(deptUsers);
-    setUnitUsers(unitUsersList);
-  }, [allUsers, currentUser.id, eligibleDepartments, eligibleUnits]);
+      setIsLoading(true);
+      try {
+        const filters: { name?: string; departmentName?: string; unitName?: string } = {};
 
-  
+        if (nameSearch) filters.name = nameSearch;
+        if (departmentSearch) filters.departmentName = departmentSearch;
+        if (unitSearch) filters.unitName = unitSearch;
+
+        const data = await getFilteredUsers(filters);
+        const usersExcludingCurrentAndAdmins = data.filter((user: User) => {
+          return (
+            user.id !== currentUser.id &&
+            user.position !== Position.ADMIN
+          );
+        });
+
+        const deptUsers: User[] = [];
+        const unitUsersList: User[] = [];
+
+        usersExcludingCurrentAndAdmins.forEach((user: User) => {
+          let addToDepartments = false;
+          let addToUnits = false;
+
+          if (user.department?.name && eligibleDepartments.has(user.department.name)) {
+            addToDepartments = true;
+          }
+
+          if (user.department?.unit.name && eligibleUnits.has(user.department.unit.name)) {
+            addToUnits = true;
+          }
+
+          if (addToDepartments) {
+            deptUsers.push(user);
+          }
+
+          if (addToUnits) {
+            unitUsersList.push(user);
+          }
+        });
+
+        setDepartmentUsers(deptUsers);
+        setUnitUsers(unitUsersList);
+      } catch (error) {
+        console.error("Помилка при отриманні користувачів:", error);
+        setDepartmentUsers([]);
+        setUnitUsers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFilteredUsers();
+  }, [nameSearch, departmentSearch, unitSearch, eligibleDepartments, eligibleUnits, currentUser.id, selectedRespondentIds]);
+
   useEffect(() => {
     const deptMap = new Map<string, number>();
     const unitMap = new Map<string, number>();
 
-    
     selectedDepartmentReviewerIds.forEach(id => {
       const reviewer = allUsers.find(user => user.id === id);
       if (reviewer?.department?.name && eligibleDepartments.has(reviewer.department.name)) {
@@ -118,7 +203,6 @@ export default function ReviewerSelector({
       }
     });
 
-    
     selectedUnitReviewerIds.forEach(id => {
       const reviewer = allUsers.find(user => user.id === id);
       if (reviewer?.department?.unit.name && eligibleUnits.has(reviewer.department.unit.name)) {
@@ -130,87 +214,76 @@ export default function ReviewerSelector({
     setSelectedUnitMap(unitMap);
   }, [selectedDepartmentReviewerIds, selectedUnitReviewerIds, allUsers, eligibleDepartments, eligibleUnits]);
 
-  
   const toggleDepartmentReviewer = (user: User) => {
     const isDepartmentSelected = selectedDepartmentReviewerIds.includes(user.id);
-    
+
     if (isDepartmentSelected) {
-      
       setDepartmentReviewerIds(prev => prev.filter(id => id !== user.id));
     } else {
       const departmentName = user.department?.name;
       if (departmentName && !selectedDepartmentMap.has(departmentName)) {
-        
         setDepartmentReviewerIds(prev => [...prev, user.id]);
       }
     }
   };
 
-  
   const toggleUnitReviewer = (user: User) => {
     const isUnitSelected = selectedUnitReviewerIds.includes(user.id);
-    
+
     if (isUnitSelected) {
-      
       setUnitReviewerIds(prev => prev.filter(id => id !== user.id));
     } else {
       const unitName = user.department?.unit.name;
       if (unitName && !selectedUnitMap.has(unitName)) {
-        
         setUnitReviewerIds(prev => [...prev, user.id]);
       }
     }
   };
 
-  
-  const filterUsersBySearch = (users: User[]) => {
-    return users.filter((user) =>
-      `${user.firstName} ${user.lastName} ${user.lastName} ${user.firstName}`
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  };
-
-  
-  const filteredDepartmentUsers = filterUsersBySearch(departmentUsers);
-  const filteredUnitUsers = filterUsersBySearch(unitUsers);
-
-  
   const canSelectDepartmentUser = (user: User) => {
+    if (selectedUnitReviewerIds.includes(user.id)) {
+      return false;
+    }
+
     if (selectedDepartmentReviewerIds.includes(user.id)) {
-      return true; 
+      return true;
     }
 
     const departmentName = user.department?.name;
     if (!departmentName || !eligibleDepartments.has(departmentName)) {
-      return false; 
+      return false;
     }
 
     return !selectedDepartmentMap.has(departmentName);
   };
 
-  
   const canSelectUnitUser = (user: User) => {
     if (selectedUnitReviewerIds.includes(user.id)) {
-      return true; 
+      return true;
     }
 
-    
     if (selectedDepartmentReviewerIds.includes(user.id)) {
-      return false; 
+      return false;
     }
 
     const unitName = user.department?.unit.name;
     if (!unitName || !eligibleUnits.has(unitName)) {
-      return false; 
+      return false;
     }
 
     return !selectedUnitMap.has(unitName);
   };
 
-  
   const renderDepartmentUserList = () => {
-    if (filteredDepartmentUsers.length === 0) {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (departmentUsers.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-4 space-y-2">
           <MagnifyingGlassIcon className="w-10 h-10 text-gray-300" />
@@ -219,13 +292,13 @@ export default function ReviewerSelector({
       );
     }
 
-    return filteredDepartmentUsers.map((user) => {
+    return departmentUsers.map((user) => {
       const fullName = `${user.lastName} ${user.firstName}`;
       const isSelected = selectedDepartmentReviewerIds.includes(user.id);
       const isSelectable = canSelectDepartmentUser(user);
       const isDisabled = !isSelectable && !isSelected;
       const departmentName = user.department?.name;
-      
+
       return (
         <button
           key={`dept-${user.id}`}
@@ -252,6 +325,9 @@ export default function ReviewerSelector({
                     <span className="ml-1 text-yellow-500 text-xs">(вже обрано рецензента)</span>
                   )}
                 </span>
+                {!isSelected && selectedUnitReviewerIds.includes(user.id) && (
+                  <span className="text-red-500 text-xs">Вже обрано як рецензента підрозділу</span>
+                )}
               </div>
             </div>
           </div>
@@ -263,9 +339,16 @@ export default function ReviewerSelector({
     });
   };
 
-  
   const renderUnitUserList = () => {
-    if (filteredUnitUsers.length === 0) {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        </div>
+      );
+    }
+
+    if (unitUsers.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-4 space-y-2">
           <MagnifyingGlassIcon className="w-10 h-10 text-gray-300" />
@@ -274,13 +357,13 @@ export default function ReviewerSelector({
       );
     }
 
-    return filteredUnitUsers.map((user) => {
+    return unitUsers.map((user) => {
       const fullName = `${user.lastName} ${user.firstName}`;
       const isSelected = selectedUnitReviewerIds.includes(user.id);
       const isSelectable = canSelectUnitUser(user);
       const isDisabled = !isSelectable && !isSelected;
       const unitName = user.department?.unit.name;
-      
+
       return (
         <button
           key={`unit-${user.id}`}
@@ -323,16 +406,39 @@ export default function ReviewerSelector({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="relative">
           <Input
+            label="Пошук за іменем"
+            icon={<UserIcon className="w-5 h-5 text-blue-500" />}
             type="text"
-            placeholder="Пошук за ім'ям..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ім'я або прізвище..."
+            value={nameSearch}
+            onChange={(e) => setNameSearch(e.target.value)}
             className="pl-10"
           />
-          <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+        </div>
+        <div className="relative">
+          <Input
+            label="Пошук за кафедрою"
+            icon={<BuildingOfficeIcon className="w-5 h-5 text-blue-500" />}
+            type="text"
+            placeholder="Назва кафедри..."
+            value={departmentSearch}
+            onChange={(e) => setDepartmentSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="relative">
+          <Input
+            label="Пошук за підрозділом"
+            icon={<BuildingOfficeIcon className="w-5 h-5 text-green-500" />}
+            type="text"
+            placeholder="Назва підрозділу..."
+            value={unitSearch}
+            onChange={(e) => setUnitSearch(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
@@ -354,7 +460,7 @@ export default function ReviewerSelector({
                   Обрано: {selectedDepartmentReviewerIds.length} / {eligibleDepartments.size}
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <div className="font-medium">Доступні кафедри:</div>
                 <div className="flex flex-wrap gap-1">
@@ -367,7 +473,7 @@ export default function ReviewerSelector({
                   ))}
                 </div>
               </div>
-              
+
               <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-inner">
                 {renderDepartmentUserList()}
               </div>
@@ -384,7 +490,7 @@ export default function ReviewerSelector({
                   Обрано: {selectedUnitReviewerIds.length} / {eligibleUnits.size}
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2 text-sm text-gray-600 bg-green-50 p-3 rounded-lg border border-green-100">
                 <div className="font-medium">Доступні підрозділи:</div>
                 <div className="flex flex-wrap gap-1">
@@ -397,7 +503,7 @@ export default function ReviewerSelector({
                   ))}
                 </div>
               </div>
-              
+
               <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50 shadow-inner">
                 {renderUnitUserList()}
               </div>
