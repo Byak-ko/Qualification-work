@@ -19,7 +19,6 @@ export default function UserFormModal({
   onSubmit,
   isSubmitting,
 }: UserFormModalProps) {
-  // Виправлена функція, яка правильно знаходить ключ за значенням в enum
   const getEnumKeyByValue = (enumObj: any, value: string) => {
     const entry = Object.entries(enumObj).find(([_, val]) => val === value);
     return entry ? entry[0] : "";

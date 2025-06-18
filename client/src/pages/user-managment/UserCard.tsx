@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import UserInfoModal from "./UserInfoModal";
 import { motion } from "framer-motion";
+import Button from "../../components/ui/Button";
 
 interface UserCardProps {
   user: User;
@@ -41,6 +42,13 @@ export default function UserCard({
                    transition-all duration-300 ease-in-out
                    hover:bg-blue-50/30"
         onClick={() => setInfoOpen(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            setInfoOpen(true);
+          }
+        }}
       >
         <div className="space-y-2 w-full pr-24">
           <h3 className="text-lg font-bold text-gray-800
@@ -61,7 +69,7 @@ export default function UserCard({
               {
                 icon: <BuildingOfficeIcon className="w-5 h-5 text-purple-500" />,
                 text: departmentName
-              }
+              },
             ].map((item, index) => (
               <div
                 key={index}
@@ -84,22 +92,18 @@ export default function UserCard({
             className="flex flex-col gap-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <Button
+              variant="icon-edit"
+              size="sm"
+              icon={<PencilIcon className="h-5 w-5" />}
               onClick={onEdit}
-              className="text-yellow-500 hover:text-yellow-600 
-                         bg-yellow-50 p-1.5 rounded-md 
-                         transition-colors duration-200"
-            >
-              <PencilIcon className="h-5 w-5" />
-            </button>
-            <button
+            />
+            <Button
+              variant="icon-danger"
+              size="sm"
+              icon={<TrashIcon className="h-5 w-5" />}
               onClick={onDelete}
-              className="text-red-500 hover:text-red-600
-                         bg-red-50 p-1.5 rounded-md 
-                         transition-colors duration-200"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            />
           </div>
         </div>
       </motion.li>
@@ -107,7 +111,6 @@ export default function UserCard({
         isOpen={infoOpen}
         onClose={() => setInfoOpen(false)}
         user={user}
-        departmentName={departmentName}
       />
     </>
   );

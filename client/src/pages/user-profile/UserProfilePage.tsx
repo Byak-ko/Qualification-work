@@ -167,6 +167,14 @@ export default function UserProfilePage() {
               {currentUser.department.name}
             </ProfileField>
 
+                  <ProfileField 
+              icon={<BuildingOfficeIcon className="h-5 w-5 text-green-600" />} 
+              label="Підрозділ"
+              color="green"
+            >
+              {currentUser.department.unit.name}
+            </ProfileField>
+
             <ProfileField 
               icon={<EnvelopeIcon className="h-5 w-5 text-red-600" />} 
               label="Email"
