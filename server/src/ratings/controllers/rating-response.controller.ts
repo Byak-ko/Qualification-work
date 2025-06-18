@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiTags('ratings/response')
+@ApiTags('ratings')
 @UseGuards(JwtAuthGuard)
 @Controller('ratings')
 @ApiBearerAuth()
@@ -93,11 +93,11 @@ export class RatingResponseController {
     }
 
     @Post(':id/respondent-fill-send')
-    async fillRespondentRating(
+    async fillCompleteRating(
         @Param('id', ParseIntPipe) ratingId: number,
         @Req() req: Request,
     ) {
         const userId = req.user.id;
-        return this.ratingService.fillRespondentRating(ratingId, userId);
+        return this.ratingService.fillCompleteRating(ratingId, userId);
     }
 }

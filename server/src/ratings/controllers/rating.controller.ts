@@ -155,8 +155,18 @@ export class RatingController {
     return this.ratingService.getParticipantApprovals(participantId);
   }
 
-  @Post(':id/complete')
-  async completeRating(@Param('id', ParseIntPipe) id: number) {
-    return this.ratingService.completeRating(id);
+  @Post(':id/submit')
+  @ApiOperation({
+    summary: 'Подати рейтинг',
+    description: 'Подання рейтингу для початку процесу оцінювання. Доступний тільки для авторизованих користувачів.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID рейтингу, який потрібно подати',
+    required: true,
+    type: Number,
+  })
+  async submitRating(@Param('id', ParseIntPipe) id: number) {
+    return this.ratingService.submitRating(id);
   }
 }

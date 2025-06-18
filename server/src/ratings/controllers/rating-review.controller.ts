@@ -76,6 +76,7 @@ export class RatingReviewController {
         @Req() req: Request,
     ) {
         const userId = req.user.id
-        return this.ratingService.reviewRating(ratingId, dto, userId);
+        const respondentId = parseInt(req.params.respondentId);
+        return this.ratingService.reviewRating(ratingId, dto, userId, respondentId);
     }
 }

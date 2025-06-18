@@ -26,7 +26,7 @@ export class RatingReportController {
   @Get(':ratingId')
   async getReport(
     @Param('ratingId') ratingId: number,
-    @Query('groupBy') groupBy?: 'department' | 'unit' | 'position' | 'scientificDegree',
+    @Query('groupBy') groupBy?: 'department' | 'unit' | 'position' | 'degree',
   ): Promise<ReportResponse[]> {
     return this.ratingReportService.generateReport(ratingId, groupBy);
   }
@@ -35,7 +35,7 @@ export class RatingReportController {
   async getPdfReport(
     @Res() res: Response,
     @Param('ratingId') ratingId: number,
-    @Query('groupBy') groupBy?: 'department' | 'unit' | 'position' | 'scientificDegree',
+    @Query('groupBy') groupBy?: 'department' | 'unit' | 'position' | 'degree',
   ): Promise<void> {
     const buffer = await this.ratingReportService.generatePdfReport(ratingId, groupBy);
     
