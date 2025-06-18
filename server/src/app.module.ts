@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Department } from './entities/department.entity';
@@ -12,7 +10,6 @@ import { Document } from './entities/document.entity';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { RatingsModule } from './ratings/rating.module';
-import { RatingItemsModule } from './rating-items/rating-items.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -33,9 +30,9 @@ import { MailModule } from './mail/mail.module';
       username: 'postgres',
       password: '11111111',
       database: 'qualification',
-      entities: [User, Department, Unit, Rating, RatingItem, RatingApproval, Document], //what to chose
+      entities: [User, Department, Unit, Rating, RatingItem, RatingApproval, Document], 
       autoLoadEntities: true,
-      synchronize: true, //production off?
+      synchronize: true,
     }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
@@ -45,7 +42,6 @@ import { MailModule } from './mail/mail.module';
     UsersModule,
     AuthModule,
     RatingsModule,
-    RatingItemsModule,
     UnitsModule,
     DepartmentsModule,
     MailModule
