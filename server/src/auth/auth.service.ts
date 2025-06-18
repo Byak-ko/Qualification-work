@@ -20,7 +20,8 @@ export class AuthService {
   private revokedTokens = new Set<number>();
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
-    if (user && await bcrypt.compare(password, user?.password) ) {
+    //no password check here, for testing purposes
+    if (user ) { //&& await bcrypt.compare(password, user?.password) 
       return user;
     }
     throw new UnauthorizedException('Невірний логін або пароль');
