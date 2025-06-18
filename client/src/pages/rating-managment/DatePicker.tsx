@@ -32,7 +32,6 @@ const DatePicker: React.FC<DatePickerProps> = ({
   }, [selected]);
 
   useEffect(() => {
-    // Close calendar when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -56,9 +55,8 @@ const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const getFirstDayOfMonth = (year: number, month: number) => {
-    // Get day of week (0-6), but Monday should be 0 and Sunday should be 6
     const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; // Adjust for Monday as first day
+    return day === 0 ? 6 : day - 1;
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -74,7 +72,6 @@ const DatePicker: React.FC<DatePickerProps> = ({
   const handleSelectDate = (day: number) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     
-    // Check if date is within allowed range
     if (minDate && newDate < minDate) return;
     if (maxDate && newDate > maxDate) return;
     
@@ -125,14 +122,12 @@ const DatePicker: React.FC<DatePickerProps> = ({
     
     const calendar = [];
     
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
       calendar.push(
         <div key={`empty-${i}`} className="h-8 w-8"></div>
       );
     }
     
-    // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const disabled = isDisabled(day);
       calendar.push(
