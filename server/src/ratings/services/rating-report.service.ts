@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RatingParticipant, RatingParticipantStatus } from 'src/entities/rating-participant.entity';
@@ -24,7 +24,7 @@ export interface ReportGroup {
   }[];
 }
 
-export type GroupByType = 'department' | 'unit' | 'position' | 'scientificDegree';
+export type GroupByType = 'department' | 'unit' | 'position' | 'degree';
 
 @Injectable()
 export class RatingReportService {
@@ -37,121 +37,139 @@ export class RatingReportService {
     this.fontPath = path.join(__dirname, '../../../assets/fonts/DejaVuSans.ttf');
   }
 
-  async generateReport(ratingId: number, groupBy?: GroupByType) {
-    // Змінено відношення, додано department.unit у зв'язки
-    const participants = await this.ratingParticipantRepository.find({
-      where: { rating: { id: ratingId } },
-      relations: [
-        'respondent',
-        'respondent.department',
-        'respondent.department.unit', // Правильний шлях до unit через department
-        'responses',
-        'rating',
-        'rating.items',
-      ],
-    });
+async generateReport(ratingId: number, groupBy?: GroupByType) {
+  const participants = await this.ratingParticipantRepository.find({
+    where: { rating: { id: ratingId } },
+    relations: [
+      'respondent',
+      'respondent.department',
+      'respondent.department.unit',
+      'responses',
+      'rating',
+      'rating.items',
+    ],
+  });
 
-    const groups: Map<string, ReportGroup> = new Map();
+  const groups: Map<string, ReportGroup> = new Map();
 
-    for (const participant of participants) {
-      let groupKey = '';
-      let groupName = '';
+  for (const participant of participants) {
+    let groupKey = '';
+    let groupName = '';
 
-      switch (groupBy) {
-        case 'department':
-          groupKey = participant.respondent.department?.id.toString() || 'no_department';
-          groupName = participant.respondent.department?.name || 'Без кафедри';
-          break;
-        case 'unit':
-          // Виправлена логіка для доступу до unit через department
-          groupKey = participant.respondent.department?.unit?.id.toString() || 'no_unit';
-          groupName = participant.respondent.department?.unit?.name || 'Без підрозділу';
-          break;
-        case 'position':
-          groupKey = participant.respondent.position || 'no_position';
-          groupName = this.getPositionText(participant.respondent.position) || 'Без посади';
-          break;
-        case 'scientificDegree':
-          groupKey = participant.respondent.degree || 'no_degree';
-          groupName = participant.respondent.degree || 'Без наукового ступеня';
-          break;
-        default:
-          groupKey = 'all';
-          groupName = 'Загальний звіт';
-      }
-
-      if (!groups.has(groupKey)) {
-        groups.set(groupKey, {
-          name: groupName,
-          totalParticipants: 0,
-          filledCount: 0,
-          approvedCount: 0,
-          revisionCount: 0,
-          pendingCount: 0,
-          averageScore: 0,
-          participants: [],
-        });
-      }
-
-      const group = groups.get(groupKey)!;
-      group.totalParticipants++;
-
-      // Calculate total score for the participant
-      let totalScore = 0;
-      if (participant.status === RatingParticipantStatus.APPROVED && participant.responses?.[0]?.scores) {
-        const scores = participant.responses[0].scores;
-        totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
-      }
-
-      // Update status counts
-      switch (participant.status) {
-        case RatingParticipantStatus.FILLED:
-          group.filledCount++;
-          break;
-        case RatingParticipantStatus.APPROVED:
-          group.approvedCount++;
-          break;
-        case RatingParticipantStatus.REVISION:
-          group.revisionCount++;
-          break;
-        case RatingParticipantStatus.PENDING:
-          group.pendingCount++;
-          break;
-      }
-
-      group.participants.push({
-        name: `${participant.respondent.lastName} ${participant.respondent.firstName}`,
-        status: participant.status,
-        score: totalScore,
-        position: this.getPositionText(participant.respondent.position),
-        degree: participant.respondent.degree,
-      });
-
-      // Update average score - запобігаємо діленню на нуль
-      if (group.totalParticipants > 0) {
-        group.averageScore = group.participants.reduce((sum, p) => sum + p.score, 0) / group.totalParticipants;
-      } else {
-        group.averageScore = 0;
-      }
+    switch (groupBy) {
+      case 'department':
+        groupKey = participant.respondent.department?.id.toString() || 'no_department';
+        groupName = participant.respondent.department?.name || 'Без кафедри';
+        break;
+      case 'unit':
+        groupKey = participant.respondent.department?.unit?.id.toString() || 'no_unit';
+        groupName = participant.respondent.department?.unit?.name || 'Без підрозділу';
+        break;
+      case 'position':
+        groupKey = participant.respondent.position || 'no_position';
+        groupName = this.getPositionText(participant.respondent.position) || 'Без посади';
+        break;
+      case 'degree':
+        groupKey = participant.respondent.degree || 'no_degree';
+        groupName = participant.respondent.degree || 'Без наукового ступеня';
+        break;
+      default:
+        groupKey = 'all';
+        groupName = 'Загальний звіт';
     }
 
-    return Array.from(groups.values());
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        name: groupName,
+        totalParticipants: 0,
+        filledCount: 0,
+        approvedCount: 0,
+        revisionCount: 0,
+        pendingCount: 0,
+        averageScore: 0,
+        participants: [],
+      });
+    }
+
+    const group = groups.get(groupKey)!;
+    group.totalParticipants++;
+
+    let totalScore = 0;
+    if (participant.status === RatingParticipantStatus.APPROVED && participant.responses?.[0]?.scores) {
+      const scores = participant.responses[0].scores;
+      totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
+    }
+
+    switch (participant.status) {
+      case RatingParticipantStatus.FILLED:
+        group.filledCount++;
+        break;
+      case RatingParticipantStatus.APPROVED:
+        group.approvedCount++;
+        break;
+      case RatingParticipantStatus.REVISION:
+        group.revisionCount++;
+        break;
+      case RatingParticipantStatus.PENDING:
+        group.pendingCount++;
+        break;
+    }
+
+    group.participants.push({
+      name: `${participant.respondent.lastName} ${participant.respondent.firstName}`,
+      status: participant.status,
+      score: totalScore,
+      position: this.getPositionText(participant.respondent.position),
+      degree: participant.respondent.degree,
+    });
+
+    if (group.totalParticipants > 0) {
+      group.averageScore = group.participants.reduce((sum, p) => sum + p.score, 0) / group.totalParticipants;
+    } else {
+      group.averageScore = 0;
+    }
   }
 
-  async generatePdfReport(ratingId: number, groupBy?: GroupByType): Promise<Buffer> {
-    const report = await this.generateReport(ratingId, groupBy);
+  for (const group of groups.values()) {
+    group.participants.sort((a, b) => {
+      const statusComparison = 
+        (a.status === RatingParticipantStatus.FILLED ? 0 : 1) - 
+        (b.status === RatingParticipantStatus.FILLED ? 0 : 1);
+      
+      if (statusComparison === 0) {
+        return b.score - a.score;
+      }
+      
+      return statusComparison;
+    });
+  }
+
+  return Array.from(groups.values());
+}
+
+ async generatePdfReport(ratingId: number, groupBy?: GroupByType): Promise<Buffer> {
     const ratingParticipant = await this.ratingParticipantRepository
       .createQueryBuilder('participant')
       .leftJoinAndSelect('participant.rating', 'rating')
       .where('rating.id = :ratingId', { ratingId })
       .getOne();
 
+    if (!ratingParticipant?.rating) {
+      throw new BadRequestException('Рейтинг не знайдено');
+    }
+
+    if (ratingParticipant.rating.status !== 'closed') {
+      throw new BadRequestException('Рейтинг ще в процесі, генерація звіту неможлива');
+    }
+
+    const report = await this.generateReport(ratingId, groupBy);
+
     const doc = new PDFDocument({
       size: 'A4',
       bufferPages: true,
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
-        Title: ratingParticipant?.rating.title || 'Звіт по рейтингу',
+        Title: ratingParticipant.rating.title || 'Звіт по рейтингу',
         Author: 'Rating System',
       },
     });
@@ -177,17 +195,16 @@ export class RatingReportService {
       doc.font('Helvetica');
     }
 
-    // 🪪 Тип звіту для титульної сторінки
     const groupTitleMap: Record<GroupByType, string> = {
       department: 'Звіт по кафедрах',
       unit: 'Звіт по підрозділах',
-      position: 'Звіт по посадах',
-      scientificDegree: 'Звіт по наукових ступенях',
+      position: 'Звіт по посадам',
+      degree: 'Звіт по наукових ступенях',
     };
 
     const groupTitle = groupBy ? groupTitleMap[groupBy] : 'Загальний звіт';
-    const ratingTitle = ratingParticipant?.rating.title || 'Невідомий рейтинг';
-    const ratingType = ratingParticipant?.rating.type || '';
+    const ratingTitle = ratingParticipant.rating.title || 'Невідомий рейтинг';
+    const ratingType = ratingParticipant.rating.type || '';
 
     // 📄 Титульна сторінка
     doc.font('DejaVuSans-Bold').fontSize(22).fillColor('#003087')
@@ -204,7 +221,6 @@ export class RatingReportService {
 
     doc.addPage();
 
-    // 📊 Групи
     for (const group of report) {
       if (doc.y > 50) {
         doc.addPage();
@@ -220,13 +236,11 @@ export class RatingReportService {
       doc.font('DejaVuSans').fontSize(11).fillColor('black');
       const statsY = startY + 40;
       doc.text(`Всього учасників: ${group.totalParticipants}`, 50, statsY);
-      doc.text(`Заповнено: ${group.filledCount}`, 50, statsY + 18);
-      doc.text(`Підтверджено: ${group.approvedCount}`, 50, statsY + 36);
-      doc.text(`На доопрацюванні: ${group.revisionCount}`, 50, statsY + 54);
-      doc.text(`Очікують заповнення: ${group.pendingCount}`, 50, statsY + 72);
-      doc.text(`Середній бал: ${group.averageScore.toFixed(2)}`, 50, statsY + 90);
+      doc.text(`Підтверджено: ${group.filledCount}`, 50, statsY + 18);
+      doc.text(`Не підтверджено: ${group.totalParticipants - group.filledCount}`, 50, statsY + 36);
+      doc.text(`Середній бал: ${group.averageScore.toFixed(2)}`, 50, statsY + 54);
 
-      let currentY = statsY + 110;
+      let currentY = statsY + 74;
       let rowIndex = 0;
 
       const drawTableHeader = () => {
@@ -234,7 +248,7 @@ export class RatingReportService {
         doc.rect(50, currentY, 500, 20).fill('#D3E4FF').stroke('#000000');
         doc.fillColor('black')
           .text('ПІБ', 55, currentY + 5, { width: 250 })
-          .text('Статус', 310, currentY + 5, { width: 120 })
+          .text('Статус', 310, currentY + 5, { width: 190 })
           .text('Бали', 440, currentY + 5, { width: 60, align: 'center' });
         currentY += 20;
         doc.font('DejaVuSans').fontSize(9);
@@ -255,7 +269,7 @@ export class RatingReportService {
 
         doc.fillColor(this.getStatusColor(participant.status))
           .text(participant.name, 55, currentY + 5, { width: 250 })
-          .text(this.getStatusText(participant.status), 310, currentY + 5, { width: 120 })
+          .text(this.getStatusText(participant.status), 310, currentY + 5, { width: 190 })
           .text(participant.score.toString(), 440, currentY + 5, { width: 60, align: 'center' });
 
         currentY += 20;
@@ -265,7 +279,6 @@ export class RatingReportService {
       doc.moveDown(2);
     }
 
-    // 📄 Підсумкова сторінка
     if (doc.y > 50) {
       doc.addPage();
     }
@@ -285,13 +298,11 @@ export class RatingReportService {
         .text('Група', 55, currentY + 8, { width: 150, ellipsis: true })
         .text('Учас.', 205, currentY + 8, { width: 40, align: 'center' })
         .text('Сер. бал', 245, currentY + 8, { width: 60, align: 'center' })
-        .text('Заповн.', 305, currentY + 8, { width: 50, align: 'center' })
-        .text('Підтв.', 355, currentY + 8, { width: 50, align: 'center' })
-        .text('Доопрацювання', 405, currentY + 8, { width: 120, align: 'center' });
+        .text('Підтв.', 305, currentY + 8, { width: 50, align: 'center' })
+        .text('Не підтв.', 355, currentY + 8, { width: 50, align: 'center' });
       currentY += rowHeight;
       doc.font('DejaVuSans').fontSize(8);
     };
-
 
     drawSummaryHeader();
 
@@ -310,8 +321,7 @@ export class RatingReportService {
         .text(group.totalParticipants.toString(), 205, currentY + 8, { width: 40, align: 'center' })
         .text(group.averageScore.toFixed(2), 245, currentY + 8, { width: 60, align: 'center' })
         .text(group.filledCount.toString(), 305, currentY + 8, { width: 50, align: 'center' })
-        .text(group.approvedCount.toString(), 355, currentY + 8, { width: 50, align: 'center' })
-        .text(group.revisionCount.toString(), 405, currentY + 8, { width: 120, align: 'center' });
+        .text((group.totalParticipants - group.filledCount).toString(), 355, currentY + 8, { width: 50, align: 'center' });
       currentY += rowHeight;
 
       rowIndex++;
@@ -323,40 +333,17 @@ export class RatingReportService {
     });
   }
 
-
-
-
   private getStatusColor(status: RatingParticipantStatus): string {
-    switch (status) {
-      case RatingParticipantStatus.PENDING:
-        return '#FF0000'; // Red for not filled
-      case RatingParticipantStatus.FILLED:
-        return '#000000'; // Black for filled
-      case RatingParticipantStatus.APPROVED:
-        return '#008000'; // Green for approved
-      case RatingParticipantStatus.REVISION:
-        return '#FFA500'; // Orange for revision
-      default:
-        return '#000000';
+    if (status === RatingParticipantStatus.PENDING) {
+      return '#FF0000'; // Red for PENDING
     }
+    return status === RatingParticipantStatus.FILLED ? '#008000' : '#000000'; // Green for FILLED, black for others
   }
 
   private getStatusText(status: RatingParticipantStatus): string {
-    switch (status) {
-      case RatingParticipantStatus.PENDING:
-        return 'Не заповнено';
-      case RatingParticipantStatus.FILLED:
-        return 'Заповнено';
-      case RatingParticipantStatus.APPROVED:
-        return 'Підтверджено';
-      case RatingParticipantStatus.REVISION:
-        return 'На доопрацюванні';
-      default:
-        return status;
-    }
+    return status === RatingParticipantStatus.FILLED ? 'Підтверджено' : 'Не підтверджено';
   }
 
-  // Додано метод для перетворення enum Position у текст
   private getPositionText(position: Position): string {
     return position || 'Невідомо';
   }

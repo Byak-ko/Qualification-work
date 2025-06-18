@@ -5,7 +5,6 @@ import { Rating, RatingStatus } from '../../entities/rating.entity';
 import { User } from '../../entities/user.entity';
 import { RatingItem } from '../../entities/rating-item.entity';
 import { CreateRatingDto } from '../dto/create-rating.dto';
-import { Document } from 'src/entities/document.entity';
 import { RatingApproval, RatingApprovalStatus, ReviewLevel } from '../../entities/rating-approval.entity';
 import { RatingParticipant } from '../../entities/rating-participant.entity';
 import { RatingResponse } from '../../entities/rating-response.entity';
@@ -20,7 +19,6 @@ export class RatingCreationService {
     @InjectRepository(User) private userRepository: Repository<User>, private mailService: MailService,
     @InjectRepository(RatingItem) private ratingItemRepository: Repository<RatingItem>,
     @InjectRepository(RatingApproval) private ratingApprovalRepository: Repository<RatingApproval>,
-    @InjectRepository(Document) private documentRepository: Repository<Document>,
     @InjectRepository(RatingParticipant) private ratingParticipantRepository: Repository<RatingParticipant>,
     @InjectRepository(RatingResponse) private ratingResponseRepository: Repository<RatingResponse>,
     private dataSource: DataSource,
@@ -119,7 +117,6 @@ export class RatingCreationService {
 
     await this.ratingParticipantRepository.save(participants);
 
-    // Create one response per participant with empty scores and documents
     for (const participant of participants) {
       const response = this.ratingResponseRepository.create({
         rating,
@@ -170,13 +167,6 @@ export class RatingCreationService {
 
     if (allApprovals.length > 0) {
       await this.ratingApprovalRepository.save(allApprovals);
-    }
-
-    try {
-      await this.mailService.sendRatingNotification(rating, respondents);
-      console.log('Повідомлення успішно відправлені');
-    } catch (error) {
-      console.error('Помилка відправки повідомлень:', error);
     }
 
     return rating;
@@ -264,7 +254,6 @@ export class RatingCreationService {
       await manager.save(ratingItems);
 
       if (rating.participants?.length) {
-        // Remove old responses first
         for (const participant of rating.participants) {
           if (participant.responses?.length) {
             await manager.remove(participant.responses);
@@ -301,7 +290,6 @@ export class RatingCreationService {
 
       await manager.save(participants);
 
-      // Create one response per participant with empty scores and documents
       for (const participant of participants) {
         const response = this.ratingResponseRepository.create({
           rating,
@@ -363,7 +351,7 @@ export class RatingCreationService {
     return updatedRating;
   }
 
-  async completeRating(ratingId: number) {
+  async submitRating(ratingId: number) {
     const rating = await this.ratingRepository.findOne({
       where: { id: ratingId },
       relations: ['items', 'participants', 'participants.respondent', 'author']
@@ -376,14 +364,12 @@ export class RatingCreationService {
     rating.status = RatingStatus.PENDING;
     await this.ratingRepository.save(rating);
 
-    
       try {
-        await this.mailService.sendRatingNotification(rating, rating.participants.map(p => p.respondent));
+         this.mailService.sendRatingNotification(rating, rating.participants.map(p => p.respondent));
         console.log('Повідомлення успішно відправлені');
       } catch (error) {
         console.error('Помилка відправки повідомлень:', error);
       }
-     
 
     return rating;
   }
@@ -400,14 +386,6 @@ export class RatingCreationService {
 
     rating.status = RatingStatus.CLOSED;
     await this.ratingRepository.save(rating);
-
-    try {
-      await this.mailService.sendRatingNotification(rating, rating.participants.map(p => p.respondent));
-      console.log('Повідомлення успішно відправлені');
-    } catch (error) {
-      console.error('Помилка відправки повідомлень:', error);
-      throw new Error('Помилка відправки повідомлень');
-    }
 
     return rating;
   }

@@ -14,64 +14,10 @@ export class RatingReviewService {
     private mailService: MailService,
   ) { }
 
-  async getRatingForReview(ratingId: number, respondentId: number, reviewerId: number) {
+
+  async reviewRating(ratingId: number, dto: RatingApprovalDto, userId: number, respondentId: number) {
     const participant = await this.ratingParticipantRepository.findOne({
-      where: {
-        rating: { id: ratingId },
-        respondent: { id: respondentId },
-      },
-      relations: ['responses', 'responses.respondent', 'rating', 'rating.items', 'approvals', 'respondent'],
-    });
-    if (!participant) throw new NotFoundException('Респондент або рейтинг не знайдено');
-
-    const isReviewer = await this.ratingApprovalRepository.findOne({
-      where: { participant: { id: participant.id }, reviewer: { id: reviewerId } },
-    });
-
-    if (!isReviewer) throw new ForbiddenException('Ви не є рецензентом цього рейтингу');
-    //if (participant.status != 'filled') {
-    //  throw new BadRequestException('Респондент ще не завершив заповнення рейтингу');
-    //}
-
-    // Find the response for this participant
-    const response = participant.responses.find(
-      response => response.respondent && response.respondent.id === respondentId
-    );
-
-    // Get scores and documents from the response
-    const scores = response?.scores || {};
-    const documents = response?.documents || {};
-
-    return {
-      name: participant.rating.title,
-      type: participant.rating.type,
-      participantId: participant.id,
-      respondent: {
-        id: participant.respondent.id,
-        firstName: participant.respondent.firstName,
-        lastName: participant.respondent.lastName,
-        email: participant.respondent.email,
-      },
-      responses: participant.rating.items.map(item => {
-        const itemId = item.id;
-        return {
-          itemId: itemId,
-          itemName: item.name,
-          maxScore: item.maxScore,
-          score: scores[itemId] || 0,
-          comment: item.comment,
-          documents: (documents[itemId] || []).map(url => ({
-            url: url
-          })),
-        };
-      }),
-    };
-  }
-
-
-  async reviewRating(ratingId: number, dto: RatingApprovalDto, userId: number) {
-    const participant = await this.ratingParticipantRepository.findOne({
-      where: { rating: { id: ratingId }, respondent: { id: userId } },
+      where: { rating: { id: ratingId }, respondent: { id: respondentId } },
       relations: [
         'approvals',
         'approvals.reviewer',
@@ -95,6 +41,9 @@ export class RatingReviewService {
     }
 
     if (dto.status === 'approved') {
+      approval.status = dto.status;
+      approval.comments = {};
+      await this.ratingApprovalRepository.save(approval);
       if (approval.reviewLevel === ReviewLevel.DEPARTMENT && participant.unitReviewer) {
         const unitApproval = participant.approvals.find(a =>
           a.reviewLevel === ReviewLevel.UNIT && a.reviewer.id === participant.unitReviewer.id
@@ -116,6 +65,7 @@ export class RatingReviewService {
           authorApproval.status = RatingApprovalStatus.REVISION;
           await this.ratingApprovalRepository.save(authorApproval);
           await this.mailService.sendNextReviewerNotification(participant, participant.rating.author);
+          console.log("authorApproval", authorApproval);
         }
       }
       else if (approval.reviewLevel === ReviewLevel.AUTHOR) {
@@ -127,15 +77,11 @@ export class RatingReviewService {
     else if (dto.status === 'pending') {
       participant.status = RatingParticipantStatus.REVISION;
       await this.ratingParticipantRepository.save(participant);
-      
-      // Reset all other approvals to pending status
       if (participant.approvals) {
-        // Find all approvals that are not the current one and have been approved
         const otherApprovals = participant.approvals.filter(a => 
           a.id !== approval.id && a.status !== RatingApprovalStatus.PENDING
         );
         
-        // Set them back to pending
         for (const otherApproval of otherApprovals) {
           otherApproval.status = RatingApprovalStatus.PENDING;
           await this.ratingApprovalRepository.save(otherApproval);
