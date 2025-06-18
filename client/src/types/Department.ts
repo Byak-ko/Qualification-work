@@ -1,4 +1,4 @@
 export type Department = {
-    id: number;
+    id: number | string;
     name: string;
   }

@@ -4,7 +4,7 @@ import { User } from "./User";
 export type Rating = {
     title: string;
     type: RatingType;
-    status: string;
+    status: RatingStatus;
     id: number;
     author: number;
     participants: { 
@@ -24,7 +24,21 @@ export type Rating = {
     items: RatingItem[];
     participantStatus: RatingParticipantStatus;
     endedAt?: Date;
+    documentsCount?: number;
+    totalSizeMB?: number;
 };
+
+export interface RatingTemplate {
+  id: number;
+  title: string;
+  type: string;
+  items: {
+    name: string;
+    maxScore: number;
+    comment: string;
+    isDocNeed: boolean;
+  }[];
+}
 
 export type RatingItem = {
     id: number;
